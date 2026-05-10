@@ -59,6 +59,14 @@ const GENCLASH_CONTRACT = '0x0000000000000000000000000000000000000000';
 
 with the real deployed address.
 
+### Live deployment
+
+| Field | Value |
+|---|---|
+| Contract address | `0x65FFA1b9FA030678D6f467e8B8D311c642BeecB5` |
+| Network | GenLayer Bradbury (chain ID `4221`) |
+| Explorer | <https://explorer-bradbury.genlayer.com/address/0x65FFA1b9FA030678D6f467e8B8D311c642BeecB5> |
+
 ## Running locally
 
 It is a single static file. Any static server works:
