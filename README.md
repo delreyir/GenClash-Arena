@@ -71,9 +71,10 @@ with the real deployed address.
 
 | Field | Value |
 |---|---|
-| Contract address | _redeploy required after schema update (see below)_ |
+| Contract address | `0x92d666EC2C1bA1f1506686Be141367c69dbffc92` |
 | Network | GenLayer Bradbury (chain ID `4221`) |
 | Entry fee | `0.0001 GEN` per level |
+| Explorer | <https://explorer-bradbury.genlayer.com/address/0x92d666EC2C1bA1f1506686Be141367c69dbffc92> |
 
 ## Running locally
 
