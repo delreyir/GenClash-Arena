@@ -1,0 +1,2382 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>GenClash Arena</title>
+    <!-- GenLayer dApp meta -->
+    <meta name="description" content="GenClash Arena - a neon air-hockey arcade powered by GenLayer Intelligent Contracts and Optimistic Democracy consensus. Play, earn XP, climb the on-chain leaderboard." />
+    <meta property="og:title" content="GenClash Arena on GenLayer" />
+    <meta property="og:description" content="Mini-game for the GenLayer community. AI validators judge your matches and award XP via Optimistic Democracy." />
+    <meta property="og:image" content="images/design.png" />
+    <style>
+        /* --- CSS dial L'Game --- */
+        :root {
+            --glow-cyan: #00ffff;
+            --glow-magenta: #ff00ff;
+            --glow-white: #ffffff;
+            --bg-dark: #070a1f; /* Zreq mghloq */
+            --table-border: #33aaff;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--glow-white);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+            /* N7aydo scroll */
+            touch-action: none;
+        }
+
+        canvas {
+            background-color: #070a1f; /* نفس لون الخلفية */
+            border-radius: 10px;
+            /* Mbedel l'glow effect bach yban f l7itan dial l'game */
+            /* box-shadow: 0 0 15px 5px var(--table-border); */
+            width: 90vw;
+            max-width: 400px;
+            aspect-ratio: 400 / 700;
+            user-select: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+        }
+
+        /* --- [JDID] Side HUD --- */
+        .hud-panel {
+            position: fixed;
+            left: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+            z-index: 10;
+        }
+        .hud-bar {
+            width: 36px;
+            height: 8px;
+            border-radius: 6px;
+            background: rgba(51, 170, 255, 0.2);
+        }
+        .hud-bar.magenta { background: rgba(255, 0, 255, 0.25); box-shadow: 0 0 12px 3px var(--glow-magenta); }
+        .hud-bar.cyan { background: rgba(0, 255, 255, 0.25); box-shadow: 0 0 12px 3px var(--glow-cyan); }
+        .hud-circle {
+            width: 30px; height: 30px; border-radius: 50%;
+            border: 2px solid var(--glow-cyan);
+            box-shadow: 0 0 14px 4px var(--glow-cyan);
+            display: grid; place-items: center;
+            color: #fff; font: bold 14px Arial;
+        }
+        .hud-score { 
+            color: #fff; font: bold 18px Arial; text-shadow: 0 0 8px #fff; 
+            display: none; /* <<< [JDIID] 7eydna l'score mn jnb */
+        }
+
+        /* --- [JDID] Start Overlay (Menu) --- */
+        .start-overlay {
+            position: fixed;
+            inset: 0;
+            display: grid;
+            place-items: start center; /* push content up and keep horizontally centered */
+            padding-top: 28px; /* slight offset from very top */
+            background: transparent; /* Show the game table or bg image */
+            z-index: 30;
+        }
+        /* Background image behind the start content */
+        .start-overlay::before {
+            content: "";
+            position: absolute; inset: 0;
+            /* Fallback gradient + tswira ila كانت start-bg.png */
+            background:
+                radial-gradient(120% 80% at 50% 20%, rgba(20,30,50,0.95), rgba(5,10,20,0.95)),
+                url('start-bg.png') center / cover no-repeat;
+            opacity: 0.7; /* شفافية باش يبان النص والزرار مزيان */
+            filter: blur(1px) saturate(1.05) brightness(1.06);
+            pointer-events: none;
+        }
+        .menu-wrap { position: relative; z-index: 1; }
+        .menu-wrap {
+            display: flex; flex-direction: column; align-items: center; gap: 18px;
+        }
+        .neon-title {
+            position: relative;
+            display: flex; flex-direction: column; align-items: center; gap: 4px;
+            margin-bottom: 10px;
+        }
+        .neon-word {
+            color: #ffffff;
+            font: 900 78px Arial, sans-serif;
+            font-style: italic;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            -webkit-text-stroke: 3.5px rgba(0, 210, 255, 0.65);
+            text-shadow:
+                0 0 8px rgba(102, 204, 255, 0.95),
+                0 0 18px rgba(102, 204, 255, 0.80),
+                0 0 36px rgba(0, 190, 255, 0.70),
+                0 0 54px rgba(0, 170, 255, 0.55);
+            filter: drop-shadow(0 0 18px rgba(0, 195, 255, 0.35));
+            animation: none;
+            line-height: 0.92;
+            transform: skewX(-8deg);
+        }
+        .neon-word.small { font-size: 68px; -webkit-text-stroke: 3px rgba(0, 210, 255, 0.6); }
+        /* subtle inner pink sheen */
+        .neon-title::before { display: none; content: none; }
+        /* remove moving shine bar to stay fixed */
+        .neon-title::after { display: none; }
+        /* Decorative neon puck icons */
+        .hero-icons { display: flex; gap: 14px; align-items: center; justify-content: center; margin-top: 36px; margin-bottom: 12px; }
+        @media (max-height: 700px) { .hero-icons { margin-top: 24px; } }
+        .puck { position: relative; width: 42px; height: 42px; border-radius: 50%; overflow: visible; will-change: transform, box-shadow; animation: floatY 3.4s ease-in-out infinite, glideLR 4.8s ease-in-out infinite, glowPulse 2.2s ease-in-out infinite; }
+        .puck::before { content: ""; position: absolute; inset: -4px; border-radius: 50%; box-shadow: 0 0 18px 6px rgba(255,255,255,0.25); }
+        .puck::after { content: ""; position: absolute; inset: 6px; border-radius: 50%; background: rgba(255,255,255,0.9); box-shadow: inset 0 0 10px rgba(255,255,255,0.65); }
+        .puck.red { background: radial-gradient(circle at 30% 30%, #ffb3b3 0%, #ff5a5a 50%, #ff2d2d 100%); box-shadow: 0 0 12px #ff7a7a, 0 0 26px #ff4040; }
+        .puck.red::before { box-shadow: 0 0 22px 8px rgba(255,64,64,0.55); }
+        .puck.blue { background: radial-gradient(circle at 30% 30%, #b3f0ff 0%, #59d0ff 50%, #25b9cf 100%); box-shadow: 0 0 12px #7fe9ff, 0 0 26px #25b9cf; }
+        .puck.blue::before { box-shadow: 0 0 22px 8px rgba(37,185,207,0.55); }
+        @keyframes floatY { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+        @keyframes glideLR { 0% { transform: translateY(0) translateX(-6px); } 50% { transform: translateY(-4px) translateX(6px); } 100% { transform: translateY(0) translateX(-6px); } }
+        @keyframes glowPulse {
+            0%, 100% { filter: drop-shadow(0 0 6px rgba(255,255,255,0.35)); }
+            50% { filter: drop-shadow(0 0 10px rgba(255,255,255,0.55)); }
+        }
+        /* staggered timing to avoid synchronous movement */
+        .puck.red { animation-delay: 0.2s, 0s, 0s; }
+        .puck.blue { animation-delay: 0s, 0.3s, 0.1s; }
+        @keyframes magPulse {
+            0%, 100% {
+                text-shadow:
+                    0 0 6px rgba(255, 105, 180, 0.85),
+                    0 0 12px rgba(255, 105, 180, 0.70),
+                    0 0 26px rgba(255, 20, 147, 0.60);
+            }
+            50% {
+                text-shadow:
+                    0 0 10px rgba(255, 120, 190, 0.95),
+                    0 0 22px rgba(255, 80, 170, 0.85),
+                    0 0 40px rgba(255, 20, 147, 0.70);
+            }
+        }
+        @keyframes titleSweep {
+            0% { left: -20%; }
+            50% { left: 100%; }
+            100% { left: -20%; }
+        }
+        .neon-hd {
+            color: #9bd8ff;
+            font: bold 24px Arial;
+            text-shadow: 0 0 10px #66ccff, 0 0 18px #66ccff;
+        }
+        .menu-btn {
+            min-width: 260px;
+            padding: 16px 24px;
+            border-radius: 18px;
+            border: 2px solid #ffb657; /* bright orange border */
+            color: #fff; font: 800 20px Arial; letter-spacing: 1px;
+            text-transform: uppercase;
+            background: linear-gradient(180deg, rgba(255,190,120,0.22) 0%, rgba(255,150,70,0.22) 50%, rgba(255,190,120,0.22) 100%);
+            box-shadow:
+                0 0 10px rgba(255,170,80,0.75),
+                0 0 20px rgba(255,140,60,0.55),
+                inset 0 0 12px rgba(255,230,200,0.75),
+                inset 0 0 24px rgba(255,170,80,0.45);
+            cursor: pointer;
+            direction: ltr; /* Ensure punctuation appears at the end for English labels */
+            unicode-bidi: isolate;
+        }
+        .menu-btn:active { transform: scale(0.98); }
+        .menu-btn[disabled] {
+            opacity: 0.55;
+            cursor: not-allowed;
+            filter: grayscale(35%);
+            box-shadow: none;
+        }
+
+        /* Position start actions lower, under the center circle of the table */
+        .start-actions { margin-top: 120px; display: flex; flex-direction: column; gap: 12px; }
+        @media (max-height: 700px) { .start-actions { margin-top: 90px; } }
+
+        /* Settings button on start screen */
+        .menu-icons { position: fixed; top: 12px; right: 12px; z-index: 31; display: flex; gap: 8px; }
+        .menu-icon-btn { width: 36px; height: 36px; border-radius: 50%; background: #fff; color: #25b9cf; border: none; box-shadow: 0 6px 18px rgba(0,0,0,0.12); cursor: pointer; font-size: 18px; }
+        .settings-panel { position: fixed; top: 56px; right: 12px; z-index: 31; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); border: 1px solid rgba(36,255,141,0.5); border-radius: 10px; padding: 10px 12px; color: #aaffc8; box-shadow: 0 0 12px rgba(36,255,141,0.35); }
+        .settings-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+        .settings-label { font: bold 14px Arial; }
+        .settings-toggle { min-width: 120px; padding: 8px 12px; border-radius: 999px; border: none; background: #fff; color: #25b9cf; font: bold 14px Arial; box-shadow: 0 6px 18px rgba(0,0,0,0.12); cursor: pointer; }
+
+        /* --- [JDID] Result Overlay (Lose) --- */
+        .result-overlay {
+            position: fixed; inset: 0; display: grid; place-items: center;
+            background: radial-gradient(ellipse at center, rgba(0,0,0,0.35), rgba(0,0,0,0.75));
+            z-index: 40; /* فوق الستارت */
+        }
+        .result-wrap { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+        .result-title {
+            color: #fff; font: bold 32px Arial; letter-spacing: 1px;
+            text-shadow: 0 0 10px #ff3b3b, 0 0 20px #ff3b3b, 0 0 30px #ff3b3b;
+        }
+        .result-title-win {
+            text-shadow: 0 0 10px #24ff8d, 0 0 20px #24ff8d, 0 0 30px #24ff8d;
+        }
+        .result-score { color: #fff; font: bold 26px Arial; text-shadow: 0 0 10px #fff; }
+        .result-sub { color: #bfbfbf; font: bold 20px Arial; text-shadow: 0 0 6px #777; }
+        /* Force English status lines to render left-to-right so ellipses are at the end */
+        .result-sub { direction: ltr; unicode-bidi: isolate; }
+        #walletMsg { direction: ltr; unicode-bidi: isolate; }
+
+        /* --- [JDID] Levels Overlay --- */
+        .levels-overlay { position: fixed; inset: 0; display: grid; place-items: center; background: radial-gradient(ellipse at center, rgba(0,0,0,0.35), rgba(0,0,0,0.8)); z-index: 35; }
+        .levels-panel { width: 280px; max-width: 90vw; padding: 16px; border: 2px solid #f5d46a; border-radius: 14px; box-shadow: 0 0 14px 4px #f5d46a; background: rgba(20,20,30,0.65); }
+        .levels-header { display:flex; justify-content:space-between; align-items:center; color:#ffd77a; font:bold 18px Arial; text-shadow:0 0 10px #ffd77a; margin-bottom:10px; }
+        .levels-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; direction: ltr; }
+        .level-item { position:relative; display:flex; align-items:center; justify-content:center; height:48px; border:2px solid #7aa0ff; border-radius:8px; color:#fff; font:bold 16px Arial; background: rgba(0,0,0,0.25); box-shadow:0 0 10px 3px #7aa0ff; cursor:pointer; }
+        .level-item.locked { opacity:0.45; filter:grayscale(40%); cursor:not-allowed; }
+        .level-item.active { border-color:#24ff8d; box-shadow:0 0 12px 4px #24ff8d; }
+        .dev-btn { padding:6px 10px; border:2px solid #24ff8d; border-radius:8px; color:#fff; font:bold 12px Arial; background:transparent; box-shadow:0 0 10px 3px #24ff8d; cursor:pointer; }
+
+         /* --- [JDID] Pause Overlay (Top Center) --- */
+         .pause-overlay { 
+            position: fixed; 
+            top: 14px; /* Bdlna inset l top */
+            left: 50%; /* Zdna hado bach tji f wst */
+            transform: translateX(-50%); /* Zdna hado bach tji f wst */
+            /* 7eydna display: grid, place-items, w background */
+            z-index: 45; 
+         }
+         .pause-panel { 
+            width: 260px; 
+            max-width: 90vw; 
+            padding: 12px 14px; 
+            border: 2px solid #ffb84d; 
+            border-radius: 12px; 
+            box-shadow: 0 0 14px 4px #ffb84d; 
+            background: rgba(20,20,30,0.85); /* Ghmmqna l'background chwia */
+            display:flex; 
+            flex-direction:column; 
+            gap:8px;
+            align-items: center; /* <<< [JDIID] HADI bach t'centri l'ktaba */
+        }
+         .pause-title { color:#ffd77a; font:bold 20px Arial; text-shadow:0 0 10px #ffd77a; }
+         .pause-sub { color:#bfbfbf; font:bold 14px Arial; text-shadow:0 0 6px #777; }
+         .pause-actions { 
+            display:flex; 
+            gap:10px;
+            justify-content: center; /* <<< [JDIID] HADI bach t'centri l'buttons */
+        }
+         .btn-quit, .btn-continue { 
+            padding: 8px 12px; 
+            border: 2px solid transparent; 
+            border-radius:10px; 
+            background:transparent; 
+            color:#fff; 
+            font:bold 14px Arial; 
+            cursor:pointer; 
+            box-shadow: none; /* <<< [JDIID] 7eydna shadow */
+        }
+         .btn-quit { 
+            border-color:transparent; /* <<< [JDIID] Bla border */
+            color: #ff6b6b; /* Ghir loun 7mer */
+        }
+         .btn-continue { 
+            border-color:#ffd77a; /* <<< [JDIID] Border sfer */
+            background: rgba(255, 255, 255, 0.1); /* Background chfaf */
+            box-shadow: 0 0 10px 3px #ffd77a; /* Rj3na shadow hna */
+        }
+
+        /* --- Pause icon inside HUD panel (Style Jdid) --- */
+        .hud-pause {
+            width: 30px; /* Bddlna l 30px */
+            height: 30px; /* Bddlna l 30px */
+            border-radius: 50%; /* Dwwrnaha */
+            margin-left: 0; /* 7eydna l margin */
+            border:2px solid var(--glow-cyan);
+            background: radial-gradient(ellipse at center, rgba(0, 80, 140, 0.6), rgba(0,0,0,0.6)); /* 7eydna l khtout */
+            box-shadow:0 0 14px 4px var(--glow-cyan); /* Zdna f glow chwia */
+            cursor:pointer; 
+            position:relative;
+        }
+        .hud-pause::before, .hud-pause::after {
+            content: ""; position: absolute; 
+            top: 8px; /* Hbtna l khtout chwia */
+            bottom: 8px; /* Tl3na l khtout chwia */
+            width: 4px; /* Rqqna l khtout chwia */
+            background:#fff; 
+            border-radius: 2px; /* Dwwrna l jnab dial khtout */
+            box-shadow:0 0 6px #fff;
+        }
+        .hud-pause::before { left: 9px; }
+        .hud-pause::after { right: 9px; }
+        .hud-pause.paused { border-color:#ffd77a; box-shadow:0 0 10px 3px #ffd77a; }
+
+        /* --- Mute button inside HUD panel --- */
+        .hud-mute {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            border:2px solid var(--glow-magenta);
+            background: radial-gradient(ellipse at center, rgba(80, 0, 140, 0.6), rgba(0,0,0,0.6));
+            box-shadow:0 0 14px 4px var(--glow-magenta);
+            color:#fff;
+            display:flex; align-items:center; justify-content:center;
+            font-size:16px; line-height:30px;
+            cursor:pointer;
+        }
+        .hud-mute.muted { border-color:#ff8a8a; box-shadow:0 0 10px 3px #ff8a8a; }
+    </style>
+</head>
+<body>
+    <!-- 7eydna l'Scoreboard w l'Title mn hna, ghadi nrsmohom f canvas -->
+    <canvas id="gameCanvas"></canvas>
+    <!-- removed: pause icon near top score (we moved it into HUD) -->
+
+    <!-- [JDID] Start Menu Overlay -->
+    <div class="start-overlay" id="startMenu">
+        <!-- settings gear removed per request -->
+        <div class="settings-panel" id="settingsPanel" style="display:none;">
+            <div class="settings-row">
+                <div class="settings-label">Sound</div>
+                <button class="settings-toggle" id="btnSoundToggle">Sound: ON</button>
+            </div>
+            <div class="settings-row">
+                <div class="settings-label">Music Style</div>
+                <select id="musicStyle" class="settings-toggle">
+                    <option value="hyped">Hyped</option>
+                    <option value="funny">Funny</option>
+                </select>
+            </div>
+        </div>
+        <div class="menu-wrap">
+            <div class="neon-title">
+                <div class="neon-word">GENCLASH</div>
+                <div class="neon-word small">ARENA</div>
+            </div>
+            <div class="hero-icons" aria-hidden="true">
+                <span class="puck red"></span>
+                <span class="puck blue"></span>
+            </div>
+            <div class="start-actions">
+                <button class="menu-btn" id="btnConnect">CONNECT WALLET</button>
+                <button class="menu-btn" id="btnStart">START GAME</button>
+            </div>
+            <div style="color:#aaffc8; font:bold 14px Arial; text-shadow:0 0 10px #7fffd4;">
+                <span id="walletAddr"></span>
+                <span id="walletMsg" style="display:block; margin-top:6px;
+                    color:#ffd77a; text-shadow:0 0 8px #ffd77a;
+                    font:bold 13px Arial;
+                "></span>
+            </div>
+            <!-- NB: 1 PLAYER و SHOP مانديروهمش دابا -->
+        </div>
+    </div>
+
+    <!-- [JDID] Lose Overlay -->
+    <div class="result-overlay" id="loseOverlay" style="display:none;">
+        <div class="result-wrap">
+            <div class="result-title">YOU LOSE</div>
+            <div class="result-score" id="loseScore">0:3</div>
+            <div class="result-sub" id="loseSub">Press Restart to play again</div>
+            <button class="menu-btn" id="btnRestart">RESTART</button>
+        </div>
+    </div>
+
+    <!-- [JDID] Win Overlay -->
+    <div class="result-overlay" id="winOverlay" style="display:none;">
+        <div class="result-wrap">
+            <div class="result-title result-title-win">YOU WIN</div>
+            <div class="result-score" id="winScore">3:0</div>
+            <button class="menu-btn" id="btnNextLevel">NEXT LEVEL</button>
+        </div>
+    </div>
+
+    <!-- Final Congrats Overlay (Level 10 complete) -->
+    <div class="result-overlay" id="congratsOverlay" style="display:none;">
+        <div class="result-wrap">
+            <div class="result-title result-title-win">CONGRATULATIONS</div>
+            <div class="result-sub" id="congratsSub">You completed Level 10!</div>
+            <button class="menu-btn" id="btnPlayAgain10">PLAY AGAIN</button>
+        </div>
+    </div>
+
+    <!-- DEV button removed per request -->
+
+    <!-- Levels Overlay (DEV) -->
+    <div class="levels-overlay" id="levelsOverlay" style="display:none;">
+        <div class="levels-panel">
+            <div class="levels-header">
+                <span>Levels</span>
+                <button class="dev-btn" id="btnCloseLevels">Close</button>
+            </div>
+            <div class="levels-grid" id="levelsGrid"></div>
+            <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:10px;">
+                <button class="dev-btn" id="devUnlockBtn" style="display:none;">Unlock next</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Levels Overlay removed per request -->
+
+    <!-- [JDID] Side HUD (scores) -->
+        <div class="hud-panel" aria-hidden="false">
+            <div class="hud-circle" id="hudLevel">1</div> <!-- Tl3na l'level l hna -->
+            <div class="hud-bar magenta"></div>
+            <button id="pauseBtn" class="hud-pause" title="Pause" aria-label="Pause"></button> <!-- Hbtna l'pause l hna -->
+            <button id="muteBtn" class="hud-mute" title="Mute" aria-label="Mute">🔈</button>
+            <div class="hud-bar cyan"></div>
+            <div class="hud-score" id="hudAi">0</div>
+            <div class="hud-score" id="hudPlayer">0</div>
+        </div>
+
+    <!-- [JDID] Pause Overlay -->
+    <div class="pause-overlay" id="pauseOverlay" style="display:none;">
+        <div class="pause-panel">
+            <div class="pause-title">PAUSE</div>
+            <div class="pause-sub">CLICK TO CONTINUE</div>
+            <div class="pause-actions">
+                <button class="btn-quit" id="btnQuit">QUIT</button>
+                <button class="btn-continue" id="btnContinue">CONTINUE</button>
+            </div>
+    </div>
+    </div>
+
+    <!-- =====================================================================
+         GenLayer integration (Testnet Bradbury)
+         - Uses genlayer-js (loaded from esm.sh) for Intelligent Contract calls.
+         - Wallet: any EIP-1193 injected provider (MetaMask, Rabby, ...).
+         - Flow:  Connect -> ensure chain 0x107d -> pay_to_play (payable)
+                  -> play match -> on win/lose: record_result (AI judged).
+         ==================================================================== -->
+    <script type="module">
+      import { createClient } from 'https://esm.sh/genlayer-js@latest';
+      import { testnetBradbury } from 'https://esm.sh/genlayer-js@latest/chains';
+      import { TransactionStatus } from 'https://esm.sh/genlayer-js@latest/types';
+
+      // ---- Configuration ------------------------------------------------
+      // TODO: After deploying contracts/GenClashArena.py, paste the address here.
+      const GENCLASH_CONTRACT = '0x0000000000000000000000000000000000000000';
+      const ENTRY_FEE_WEI      = 10n ** 15n;          // 0.001 GEN
+      const GENLAYER_CHAIN_HEX = '0x107d';            // 4221
+      const GENLAYER_CHAIN_PARAMS = {
+        chainId: GENLAYER_CHAIN_HEX,
+        chainName: 'GenLayer Bradbury',
+        nativeCurrency: { name: 'GEN', symbol: 'GEN', decimals: 18 },
+        rpcUrls: ['https://rpc-bradbury.genlayer.com'],
+        blockExplorerUrls: ['https://explorer-bradbury.genlayer.com'],
+      };
+      const DEBUG = false;
+      const clog  = (...a)=>{ if (DEBUG) console.log(...a); };
+
+      // ---- DOM refs -----------------------------------------------------
+      const walletAddrEl = document.getElementById('walletAddr');
+      const walletMsgEl  = document.getElementById('walletMsg');
+      const btnConnect   = document.getElementById('btnConnect');
+      const btnStart     = document.getElementById('btnStart');
+      const setStatus    = (m)=>{ if (walletMsgEl) walletMsgEl.textContent = m || ''; };
+      if (btnStart) btnStart.disabled = true;
+
+      // ---- State --------------------------------------------------------
+      let userAddress = null;
+      let glClient    = null;
+      let matchStartTs = 0;
+
+      // ---- Helpers ------------------------------------------------------
+      function getInjectedProvider(){
+        return (typeof window !== 'undefined' && window.ethereum) ? window.ethereum : null;
+      }
+
+      async function ensureGenLayerChain(provider){
+        const cur = await provider.request({ method: 'eth_chainId' });
+        if (typeof cur === 'string' && cur.toLowerCase() === GENLAYER_CHAIN_HEX){
+          return;
+        }
+        try{
+          await provider.request({
+            method: 'wallet_switchEthereumChain',
+            params: [{ chainId: GENLAYER_CHAIN_HEX }],
+          });
+        }catch(err){
+          // 4902 = chain not added; try to add it.
+          if (err && (err.code === 4902 || /unrecognized/i.test(err.message||''))){
+            await provider.request({
+              method: 'wallet_addEthereumChain',
+              params: [GENLAYER_CHAIN_PARAMS],
+            });
+          } else {
+            throw err;
+          }
+        }
+      }
+
+      async function buildClient(){
+        if (!userAddress) throw new Error('Wallet not connected');
+        glClient = createClient({
+          chain: testnetBradbury,
+          account: userAddress,
+        });
+        try { await glClient.connect('testnetBradbury'); } catch(_) {}
+        return glClient;
+      }
+
+      // ---- Connect wallet ----------------------------------------------
+      async function handleConnect(ev){
+        if (ev){ ev.preventDefault(); ev.stopImmediatePropagation(); }
+        setStatus('1/3: Locating wallet...');
+        btnConnect.disabled = true; btnConnect.textContent = 'CONNECTING...';
+        try{
+          const provider = getInjectedProvider();
+          if (!provider) throw new Error('No EVM wallet (install MetaMask).');
+          setStatus('2/3: Requesting accounts...');
+          const accs = await provider.request({ method: 'eth_requestAccounts' });
+          userAddress = Array.isArray(accs) ? accs[0] : null;
+          if (!userAddress) throw new Error('No account returned.');
+          setStatus('3/3: Switching to GenLayer Bradbury...');
+          await ensureGenLayerChain(provider);
+          await buildClient();
+          if (walletAddrEl) walletAddrEl.textContent = userAddress.slice(0,6)+'...'+userAddress.slice(-4);
+          setStatus('✅ Connected to GenLayer Bradbury');
+          if (btnStart) btnStart.disabled = false;
+        }catch(e){
+          console.warn('Connect error:', e);
+          setStatus(`❌ ${e.message?.split('\n')[0] || 'Connection failed'}`);
+        }finally{
+          btnConnect.textContent = 'CONNECT WALLET';
+          btnConnect.disabled = false;
+        }
+      }
+
+      // ---- Pay entry fee (reusable for Start + Restart) ----------------
+      async function payToPlay(){
+        if (!userAddress || !glClient) throw new Error('Wallet not connected');
+        if (!GENCLASH_CONTRACT || /^0x0{40}$/i.test(GENCLASH_CONTRACT)){
+          throw new Error('Contract address not configured (GENCLASH_CONTRACT).');
+        }
+        const txHash = await glClient.writeContract({
+          address: GENCLASH_CONTRACT,
+          functionName: 'pay_to_play',
+          args: [],
+          value: ENTRY_FEE_WEI,
+        });
+        clog('pay_to_play tx:', txHash);
+        matchStartTs = Date.now();
+        glClient.waitForTransactionReceipt({ hash: txHash, status: TransactionStatus.ACCEPTED })
+          .then(()=> setStatus('Entry fee accepted by validators.'))
+          .catch(()=>{});
+        return txHash;
+      }
+
+      async function handleStart(ev){
+        if (ev){ ev.preventDefault(); ev.stopImmediatePropagation(); }
+        if (!userAddress || !glClient){
+          setStatus('Connect your wallet first.');
+          return;
+        }
+        setStatus('Approve 0.001 GEN entry fee in your wallet...');
+        if (btnStart){ btnStart.disabled = true; btnStart.textContent = 'PROCESSING...'; }
+        try{
+          await payToPlay();
+          setStatus('Tx submitted. Starting match...');
+          try{ window.startGameDirect?.(); }catch(_){}
+          const sm = document.getElementById('startMenu');
+          if (sm) sm.style.display = 'none';
+        }catch(e){
+          console.error('Payment error:', e);
+          setStatus(e?.message?.includes('configured')
+            ? 'Contract address not set in index.html.'
+            : 'Payment failed or rejected.');
+        }finally{
+          if (btnStart){ btnStart.textContent = 'START GAME'; btnStart.disabled = false; }
+        }
+      }
+
+      // ---- Submit match result for AI-judged XP ------------------------
+      // Called by the existing game code from the win/lose handlers.
+      async function recordResult({ playerScore, aiScore, level, summary }){
+        if (!glClient || !userAddress) return;
+        if (/^0x0{40}$/i.test(GENCLASH_CONTRACT)) return;
+        const duration = Math.max(0, Math.round((Date.now() - matchStartTs) / 1000));
+        try{
+          setStatus('Submitting result for AI consensus...');
+          const txHash = await glClient.writeContract({
+            address: GENCLASH_CONTRACT,
+            functionName: 'record_result',
+            args: [
+              Number(playerScore) || 0,
+              Number(aiScore)     || 0,
+              Number(level)       || 1,
+              duration,
+              String(summary || '').slice(0, 500),
+            ],
+          });
+          clog('record_result tx:', txHash);
+          setStatus('Match submitted. Waiting for validator consensus...');
+          glClient.waitForTransactionReceipt({ hash: txHash, status: TransactionStatus.ACCEPTED })
+            .then(async ()=>{
+              try{
+                const xp = await glClient.readContract({
+                  address: GENCLASH_CONTRACT,
+                  functionName: 'get_xp',
+                  args: [userAddress],
+                });
+                setStatus(`✅ Validators awarded XP. Total XP: ${xp}`);
+              }catch(_){ setStatus('✅ Match accepted by validators.'); }
+            })
+            .catch(()=> setStatus('⚠️ Result not accepted yet.'));
+        }catch(e){
+          console.error('record_result error:', e);
+          setStatus('❌ Could not submit result on-chain.');
+        }
+      }
+
+      // Expose a small global API for the existing game script.
+      window.GenClashChain = {
+        get connected(){ return !!userAddress; },
+        get address(){ return userAddress; },
+        payToPlay,
+        recordResult,
+        setStatus,
+      };
+
+      if (btnConnect) btnConnect.addEventListener('click', handleConnect, { capture: true });
+      if (btnStart)   btnStart.addEventListener('click',   handleStart,   { capture: true });
+    </script>
+
+    <script>
+        // --- JavaScript dial L'Game ---
+
+        window.addEventListener('load', () => {
+            const canvas = document.getElementById('gameCanvas');
+            const ctx = canvas.getContext('2d');
+
+            // [HUD] refs
+            const hudAiEl = document.getElementById('hudAi');
+            const hudPlayerEl = document.getElementById('hudPlayer');
+            const hudLevelEl = document.getElementById('hudLevel');
+
+            // [Menu] refs
+            const startMenu = document.getElementById('startMenu');
+            const btnConnect = document.getElementById('btnConnect');
+            const btnStart = document.getElementById('btnStart');
+            const btnSettings = document.getElementById('btnSettings');
+            const settingsPanel = document.getElementById('settingsPanel');
+            const btnSoundToggle = document.getElementById('btnSoundToggle');
+            const musicStyleSel = document.getElementById('musicStyle');
+            const walletAddrEl = document.getElementById('walletAddr');
+            const loseOverlay = document.getElementById('loseOverlay');
+            const loseScoreEl = document.getElementById('loseScore');
+            const loseSubEl = document.getElementById('loseSub');
+            const winOverlay = document.getElementById('winOverlay');
+            const winScoreEl = document.getElementById('winScore');
+            const btnNextLevel = document.getElementById('btnNextLevel');
+            const levelsOverlay = document.getElementById('levelsOverlay');
+            const levelsGrid = document.getElementById('levelsGrid');
+            const devUnlockBtn = document.getElementById('devUnlockBtn');
+            const btnDev = document.getElementById('btnDev');
+            const btnCloseLevels = document.getElementById('btnCloseLevels');
+            const pauseBtn = document.getElementById('pauseBtn');
+            const muteBtn = document.getElementById('muteBtn');
+            const pauseOverlay = document.getElementById('pauseOverlay');
+            const btnQuit = document.getElementById('btnQuit');
+            const btnContinue = document.getElementById('btnContinue');
+            const hudPanel = document.querySelector('.hud-panel');
+
+            // --- Canvas scaling ---
+            const WIDTH_BASE = 400;
+            const HEIGHT_BASE = 700;
+            const MINI_MODE = true;           // khdama: n9s l resolution
+            const TARGET_WIDTH = 300;         // width dial mini app (t9der tbdelha)
+            const SCALE = MINI_MODE ? (TARGET_WIDTH / WIDTH_BASE) : 1;
+
+            const TABLE_WIDTH = Math.round(WIDTH_BASE * SCALE);
+            const TABLE_HEIGHT = Math.round(HEIGHT_BASE * SCALE);
+            canvas.width = TABLE_WIDTH;
+            canvas.height = TABLE_HEIGHT;
+
+            // Variablat
+const PADDLE_RADIUS = Math.round(38 * SCALE); // enlarged player & AI paddles
+            const PUCK_RADIUS = Math.round(18 * SCALE);
+            const GOAL_WIDTH = Math.round(150 * SCALE);
+            const GOAL_HEIGHT = Math.round(15 * SCALE);
+            const BORDER_WIDTH = Math.max(1, Math.round(10 * SCALE));
+
+            const MAX_PUCK_SPEED = 15 * SCALE;
+            const PADDLE_HIT_SPEED_SCALE = 0.8; // N9sna sor3a mlli tdrab l'paddle (player/adversaire)
+            const AI_SPEED = 3.6 * SCALE; // n9sna shwiya l vitesse dial l'AI
+
+            const WINNING_SCORE = 3; // L'Hedef howa 3 goals
+            let currentLevel = 1; // Kanbdaw b Level 1
+            let isPaused = true; // [JDID] Bidaya: waqfin f menu
+            let isOnStartMenu = true; // باش نبينو غير الطابلة بلا الكورات
+            let isMuted = false; // Mute dial s-sound
+            let maxUnlockedLevel = 1; // [JDID] control dial levels
+            const TOTAL_LEVELS = 10;
+            const DEV_MODE = false; // مخفي: تعطيل زر/خيارات المطور
+
+            // --- Pause/Resume logic ---
+            function updatePauseUI() {
+                if (!pauseBtn) return;
+                pauseBtn.classList.toggle('paused', isPaused);
+            }
+            function showPauseOverlay() { if (pauseOverlay && !isOnStartMenu) pauseOverlay.style.display = 'block'; }
+            function hidePauseOverlay() { if (pauseOverlay) pauseOverlay.style.display = 'none'; }
+            function togglePause() {
+                isPaused = !isPaused;
+                playSound(isPaused ? 'pause-on' : 'pause-off');
+                updatePauseUI();
+            if (isPaused) showPauseOverlay(); else hidePauseOverlay();
+            }
+            if (pauseBtn) pauseBtn.addEventListener('click', togglePause);
+            function updateMuteUI() {
+                if (!muteBtn) return;
+                muteBtn.textContent = isMuted ? '🔇' : '🔈';
+                muteBtn.classList.toggle('muted', isMuted);
+            }
+            function updateSoundLabel(){ if (btnSoundToggle) btnSoundToggle.textContent = isMuted ? 'Sound: OFF' : 'Sound: ON'; }
+            function toggleMute() {
+                isMuted = !isMuted;
+                updateMuteUI();
+                try {
+                    if (!audioCtx) initAudio();
+                    if (masterGain) masterGain.gain.value = isMuted ? 0 : 0.3;
+                    // On start menu: never start sounds; just ensure they are stopped
+                    if (isOnStartMenu) { stopAmbient(); stopMenuMusic(); }
+                } catch (e) { /* ignore */ }
+            }
+            if (muteBtn) { updateMuteUI(); muteBtn.addEventListener('click', () => { toggleMute(); updateSoundLabel(); }); }
+            if (btnSoundToggle) btnSoundToggle.addEventListener('click', () => { toggleMute(); updateSoundLabel(); });
+            if (btnSettings) btnSettings.addEventListener('click', () => {
+                if (!settingsPanel) return;
+                const show = settingsPanel.style.display !== 'block';
+                settingsPanel.style.display = show ? 'block' : 'none';
+            });
+            if (musicStyleSel) {
+                musicStyleSel.addEventListener('change', () => {
+                    menuStyle = musicStyleSel.value === 'funny' ? 'funny' : 'hyped';
+                    // if in start menu, restart music to reflect new style
+                    if (isOnStartMenu && !isMuted) {
+                        stopMenuMusic();
+                        startMenuMusic();
+                    }
+                });
+            }
+            // Hide HUD while in start menu
+            if (hudPanel) hudPanel.style.display = 'none';
+            updateSoundLabel();
+            if (btnContinue) btnContinue.addEventListener('click', () => { isPaused = false; updatePauseUI(); hidePauseOverlay(); });
+            if (pauseOverlay) pauseOverlay.addEventListener('click', () => { isPaused = false; updatePauseUI(); hidePauseOverlay(); });
+            if (btnQuit) btnQuit.addEventListener('click', () => {
+                hidePauseOverlay();
+                // رجعنا لصفحة البداية
+                isPaused = true; updatePauseUI();
+                isOnStartMenu = true;
+                stopAmbient();
+                stopMenuMusic();
+                if (startMenu) startMenu.style.display = 'grid';
+            });
+
+            let playerScore = 0;
+            let aiScore = 0;
+
+            // --- [JDID] Variable l message dial L'Goal ---
+            let goalMessage = { text: "", timer: 0, color: "" };
+            const GOAL_MESSAGE_DURATION = 60; // ~1 second
+
+            // --- [JDID] N9so sor3a dial l'puck f bidaya wahd taniya ---
+            let puckSlowTimer = 0; // frames
+            const PUCK_SLOW_FRAMES = 60; // ~1 second
+
+            // Colors (Hex)
+            const COLOR_PLAYER = '#00ffff'; // Cyan
+            const COLOR_AI = '#ff00ff'; // Magenta
+            const COLOR_PUCK = '#ffffff'; // White
+            const COLOR_BORDER_PLAYER = '#00ffff';
+            const COLOR_BORDER_AI = '#ff00ff';
+            const COLOR_HEX_BG = 'rgba(51, 170, 255, 0.05)'; // Loun chebka f background
+            const COLOR_GOAL_NET = 'rgba(255, 255, 255, 0.2)';
+
+            // --- [JDID] Spin constants (Level 6 reactive spin) ---
+            const SPIN_DAMPING = 0.96;    // kaynqs l'speed shwiya kol frame
+            const SPIN_IMPULSE = 0.22;    // ch7al nzid l'speed mlli tdrab l'kora
+            const SPIN_MAX = 0.55;        // 7d a3la l'speed bach ma ytfllatsh
+            const SPIN_SPRING = 0.08;     // kayrj3 spinAngle l'0 bshwiya (Level 7)
+
+            // --- [JDID] Level 8: Puck size animation (tsghar w tkbar) ---
+            const PUCK_SCALE_MIN = 0.7;   // asghar 70% mn base
+            const PUCK_SCALE_MAX = 1.25;  // akbar 125% mn base
+            const PUCK_SCALE_SPEED = 0.035; // sor3a dial taghyir size
+
+            // --- [JDID] Wall burst particles (blue/pink) ---
+            const WALL_BURST_PARTICLES = 26;
+            const WALL_BURST_LIFE = 24;
+            const WALL_BURST_SPEED = Math.max(2, Math.round(3 * SCALE));
+            const WALL_COLOR_RIGHT = 'rgba(51, 170, 255, 1)'; // blue
+            const WALL_COLOR_LEFT  = 'rgba(255, 0, 255, 1)';  // pink
+            const wallBursts = [];
+
+            // --- [JDID] Audio: simple WebAudio synth ---
+            let audioCtx = null;
+            let masterGain = null;
+            // Ambient start page sound
+            let ambientGain = null, ambientOsc1 = null, ambientOsc2 = null, ambientRunning = false;
+            // Menu music (Funny/Hyped)
+            let menuMusicInterval = null;
+            let menuMusicStep = 0;
+            let menuStyle = 'hyped';
+            function initAudio() {
+                if (audioCtx) return;
+                const Ctx = window.AudioContext || window.webkitAudioContext;
+                audioCtx = new Ctx();
+                masterGain = audioCtx.createGain();
+                masterGain.gain.value = 0.3; // overall volume
+                masterGain.connect(audioCtx.destination);
+            }
+            function resumeAudio() {
+                if (!audioCtx) initAudio();
+                if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+            }
+            // unlock audio on first interaction
+            document.addEventListener('pointerdown', resumeAudio);
+            document.addEventListener('keydown', resumeAudio);
+            // (Removed) No automatic ambient or menu music on start page
+
+            function stepMenuMusic(style) {
+                if (isMuted || !isOnStartMenu) return;
+                const step = menuMusicStep % 16; // 16-step pattern
+                // Basic drums
+                // Kick
+                if (step === 0 || step === 8) playTone(90, 0.12, 'sine', 0.12);
+                // Snare
+                if (step === 4 || step === 12) playNoiseBurst(1000, 0.06, 0.05, 'bandpass');
+                // Hat
+                playNoiseBurst(600 + (Math.random() * 60), 0.02, 0.02, 'bandpass');
+
+                if (style === 'hyped') {
+                    // Bassline
+                    const bassSeq = [90, 100, 110, 100, 95, 105, 115, 105, 90, 100, 110, 120, 115, 105, 95, 100];
+                    playTone(bassSeq[step], 0.1, 'triangle', 0.09);
+                    // Lead
+                    if (step % 4 === 2) playBlip(700 + (step * 6), 480, 0.08, 'triangle', 0.10);
+                } else {
+                    // Funny: playful arpeggio
+                    const funnySeq = [660, 520, 740, 580, 700, 560, 780, 620, 660, 520, 740, 580, 700, 560, 780, 620];
+                    playBlip(funnySeq[step], funnySeq[step] - 180, 0.08, 'sine', 0.10);
+                }
+                menuMusicStep++;
+            }
+
+            function startMenuMusic() {
+                if (isMuted || !isOnStartMenu) return;
+                // stop ambient if running to avoid overlap
+                try { stopAmbient(); } catch(e){}
+                if (menuMusicInterval) return; // already running
+                menuMusicStep = 0;
+                resumeAudio();
+                menuMusicInterval = setInterval(() => stepMenuMusic(menuStyle), 180); // ~133 BPM 16th notes
+            }
+
+            function stopMenuMusic() {
+                if (menuMusicInterval) {
+                    clearInterval(menuMusicInterval);
+                    menuMusicInterval = null;
+                }
+            }
+
+            function maybeStartMenuMusic() { if (isOnStartMenu && !isMuted && !menuMusicInterval) startMenuMusic(); }
+
+            // Gentle ambient pad for start/connect page
+            function startAmbient() {
+                if (isMuted) return;
+                if (!audioCtx) initAudio();
+                const now = audioCtx.currentTime;
+
+                ambientGain = audioCtx.createGain();
+                ambientGain.gain.value = 0.0;
+                ambientGain.connect(masterGain);
+
+                ambientOsc1 = audioCtx.createOscillator();
+                ambientOsc1.type = 'sine';
+                ambientOsc1.frequency.value = 150;
+
+                ambientOsc2 = audioCtx.createOscillator();
+                ambientOsc2.type = 'triangle';
+                ambientOsc2.frequency.value = 180;
+                ambientOsc2.detune.value = 8;
+
+                ambientOsc1.connect(ambientGain);
+                ambientOsc2.connect(ambientGain);
+
+                ambientOsc1.start(now);
+                ambientOsc2.start(now);
+
+                // Soft fade-in
+                ambientGain.gain.linearRampToValueAtTime(0.06, now + 0.6);
+                ambientRunning = true;
+            }
+
+            function stopAmbient() {
+                if (!ambientRunning) return;
+                const now = audioCtx ? audioCtx.currentTime : 0;
+                if (ambientGain) ambientGain.gain.linearRampToValueAtTime(0.0, now + 0.4);
+                try { if (ambientOsc1) ambientOsc1.stop(now + 0.5); } catch {}
+                try { if (ambientOsc2) ambientOsc2.stop(now + 0.5); } catch {}
+                ambientOsc1 = null; ambientOsc2 = null; ambientGain = null;
+                ambientRunning = false;
+            }
+
+            function maybeStartAmbient() {
+                if (isOnStartMenu && !isMuted && !ambientRunning) {
+                    resumeAudio();
+                    startAmbient();
+                }
+            }
+
+            function playTone(freq = 440, duration = 0.08, type = 'sine', gain = 0.15) {
+                if (!audioCtx) initAudio();
+                const osc = audioCtx.createOscillator();
+                const g = audioCtx.createGain();
+                osc.type = type;
+                osc.frequency.value = freq;
+                g.gain.value = gain;
+                osc.connect(g);
+                g.connect(masterGain);
+                const now = audioCtx.currentTime;
+                g.gain.setValueAtTime(gain, now);
+                g.gain.exponentialRampToValueAtTime(0.001, now + duration);
+                osc.start(now);
+                osc.stop(now + duration + 0.02);
+            }
+            function playBlip(freqStart = 700, freqEnd = 420, duration = 0.09, type = 'triangle', gain = 0.12) {
+                if (!audioCtx) initAudio();
+                const osc = audioCtx.createOscillator();
+                const g = audioCtx.createGain();
+                osc.type = type;
+                const now = audioCtx.currentTime;
+                osc.frequency.setValueAtTime(freqStart, now);
+                osc.frequency.exponentialRampToValueAtTime(Math.max(1, freqEnd), now + duration * 0.8);
+                g.gain.setValueAtTime(gain, now);
+                g.gain.exponentialRampToValueAtTime(0.001, now + duration);
+                osc.connect(g);
+                g.connect(masterGain);
+                osc.start(now);
+                osc.stop(now + duration + 0.04);
+            }
+            function playNoiseBurst(centerFreq = 800, duration = 0.08, gain = 0.08, type = 'bandpass') {
+                if (!audioCtx) initAudio();
+                const bufferSize = 2048;
+                const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+                const data = noiseBuffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1; // white noise
+                const src = audioCtx.createBufferSource();
+                src.buffer = noiseBuffer;
+                const filter = audioCtx.createBiquadFilter();
+                filter.type = type; // bandpass/lowpass
+                filter.frequency.value = centerFreq;
+                filter.Q.value = 8;
+                const g = audioCtx.createGain();
+                const now = audioCtx.currentTime;
+                g.gain.setValueAtTime(gain, now);
+                g.gain.exponentialRampToValueAtTime(0.001, now + duration);
+                src.connect(filter);
+                filter.connect(g);
+                g.connect(masterGain);
+                src.start(now);
+                src.stop(now + duration + 0.02);
+            }
+            function playSound(name) {
+                if (isMuted) return; // ma ntsawtch ila mute
+                switch (name) {
+                    case 'paddle':
+                        // softer arcade two-tone ping
+                        playTone(600, 0.05, 'sine', 0.09);
+                        setTimeout(() => playTone(720, 0.05, 'sine', 0.08), 30);
+                        break;
+                    case 'wall':
+                        // subtle low tick for wall hits
+                        playTone(180 + Math.random() * 30, 0.045, 'sine', 0.09);
+                        setTimeout(() => playNoiseBurst(400, 0.04, 0.03, 'lowpass'), 0);
+                        break;
+                    case 'goal-player':
+                        playTone(700, 0.1, 'triangle', 0.14);
+                        setTimeout(() => playTone(900, 0.12, 'triangle', 0.12), 60);
+                        break;
+                    case 'goal-ai':
+                        playTone(500, 0.1, 'triangle', 0.14);
+                        setTimeout(() => playTone(350, 0.12, 'triangle', 0.12), 60);
+                        break;
+                    case 'win':
+                        playTone(600, 0.12, 'sine', 0.14);
+                        setTimeout(() => playTone(800, 0.12, 'sine', 0.12), 120);
+                        setTimeout(() => playTone(1000, 0.16, 'sine', 0.12), 240);
+                        break;
+                    case 'lose':
+                        playTone(400, 0.12, 'sine', 0.14);
+                        setTimeout(() => playTone(300, 0.12, 'sine', 0.12), 120);
+                        setTimeout(() => playTone(220, 0.16, 'sine', 0.12), 240);
+                        break;
+                    case 'pause-on':
+                        playTone(300, 0.08, 'sine', 0.1);
+                        break;
+                    case 'pause-off':
+                        playTone(500, 0.08, 'sine', 0.1);
+                        break;
+                }
+            }
+
+            function spawnWallBurst(side, x, y) {
+                const color = side === 'right' ? WALL_COLOR_RIGHT : WALL_COLOR_LEFT;
+                const dirX = side === 'right' ? -1 : 1; // away from wall
+                const particles = [];
+                for (let i = 0; i < WALL_BURST_PARTICLES; i++) {
+                    const angle = (Math.random() * Math.PI / 2 - Math.PI / 4); // around normal
+                    const speed = WALL_BURST_SPEED * (0.7 + Math.random() * 0.8);
+                    particles.push({
+                        x,
+                        y,
+                        vx: dirX * speed * Math.cos(angle),
+                        vy: speed * Math.sin(angle),
+                        life: WALL_BURST_LIFE,
+                        color,
+                        radius: Math.max(1, Math.round(2 * SCALE))
+                    });
+                }
+                wallBursts.push({ particles });
+            }
+
+            function updateAndDrawWallBursts() {
+                for (let i = wallBursts.length - 1; i >= 0; i--) {
+                    const burst = wallBursts[i];
+                    for (let j = burst.particles.length - 1; j >= 0; j--) {
+                        const p = burst.particles[j];
+                        p.x += p.vx;
+                        p.y += p.vy;
+                        p.vx *= 0.96; // friction
+                        p.vy *= 0.96;
+                        p.life--;
+
+                        const alpha = Math.max(0, p.life / WALL_BURST_LIFE);
+                        ctx.save();
+                        ctx.shadowColor = p.color;
+                        ctx.shadowBlur = 12;
+                        ctx.fillStyle = p.color.replace(', 1)', `, ${alpha})`);
+                        ctx.beginPath();
+                        ctx.arc(p.x, p.y, p.radius * alpha, 0, Math.PI * 2);
+                        ctx.fill();
+                        ctx.restore();
+
+                        if (p.life <= 0) burst.particles.splice(j, 1);
+                    }
+                    if (burst.particles.length === 0) wallBursts.splice(i, 1);
+                }
+            }
+
+            // --- [JDID] Rail glow (frame light-up) ---
+            const RAIL_GLOW_MAX = 36; // زدنا المدة باش يبان أكثر
+            const railsGlow = { top: 0, bottom: 0, left: 0, right: 0 };
+            function triggerRailGlow(side) {
+                if (railsGlow[side] !== undefined) railsGlow[side] = RAIL_GLOW_MAX;
+            }
+            function drawRailGlow() {
+                // نرفع حد أدنى للشفافية باش الوميض ديما يبان شوية
+                const base = 0.35;
+                const gain = 0.65;
+                const alphaTop = Math.max(0, Math.min(1, base + (railsGlow.top / RAIL_GLOW_MAX) * gain));
+                const alphaBottom = Math.max(0, Math.min(1, base + (railsGlow.bottom / RAIL_GLOW_MAX) * gain));
+                const alphaLeft = Math.max(0, Math.min(1, base + (railsGlow.left / RAIL_GLOW_MAX) * gain));
+                const alphaRight = Math.max(0, Math.min(1, base + (railsGlow.right / RAIL_GLOW_MAX) * gain));
+
+                // Top segments glow (Magenta)
+                if (alphaTop > 0) {
+                    ctx.save();
+                    ctx.strokeStyle = COLOR_BORDER_AI;
+                    ctx.shadowColor = COLOR_BORDER_AI;
+                    ctx.globalAlpha = alphaTop;
+                    ctx.shadowBlur = 42;
+                    ctx.lineWidth = BORDER_WIDTH + 4;
+                    ctx.beginPath();
+                    ctx.moveTo(0, 0);
+                    ctx.lineTo((TABLE_WIDTH - GOAL_WIDTH) / 2, 0);
+                    ctx.stroke();
+                    ctx.beginPath();
+                    ctx.moveTo((TABLE_WIDTH + GOAL_WIDTH) / 2, 0);
+                    ctx.lineTo(TABLE_WIDTH, 0);
+                    ctx.stroke();
+                    ctx.restore();
+                    railsGlow.top = Math.max(0, railsGlow.top - 1);
+                }
+
+                // Bottom segments glow (Cyan)
+                if (alphaBottom > 0) {
+                    ctx.save();
+                    ctx.strokeStyle = COLOR_BORDER_PLAYER;
+                    ctx.shadowColor = COLOR_BORDER_PLAYER;
+                    ctx.globalAlpha = alphaBottom;
+                    ctx.shadowBlur = 42;
+                    ctx.lineWidth = BORDER_WIDTH + 4;
+                    ctx.beginPath();
+                    ctx.moveTo(0, TABLE_HEIGHT);
+                    ctx.lineTo((TABLE_WIDTH - GOAL_WIDTH) / 2, TABLE_HEIGHT);
+                    ctx.stroke();
+                    ctx.beginPath();
+                    ctx.moveTo((TABLE_WIDTH + GOAL_WIDTH) / 2, TABLE_HEIGHT);
+                    ctx.lineTo(TABLE_WIDTH, TABLE_HEIGHT);
+                    ctx.stroke();
+                    ctx.restore();
+                    railsGlow.bottom = Math.max(0, railsGlow.bottom - 1);
+                }
+
+                // Left rail glow: top (magenta) and bottom (cyan)
+                if (alphaLeft > 0) {
+                    ctx.save();
+                    ctx.globalAlpha = alphaLeft;
+                    ctx.lineWidth = BORDER_WIDTH + 4;
+                    ctx.shadowBlur = 42;
+                    // top half magenta
+                    ctx.strokeStyle = COLOR_BORDER_AI; ctx.shadowColor = COLOR_BORDER_AI;
+                    ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, TABLE_HEIGHT / 2); ctx.stroke();
+                    // bottom half cyan
+                    ctx.strokeStyle = COLOR_BORDER_PLAYER; ctx.shadowColor = COLOR_BORDER_PLAYER;
+                    ctx.beginPath(); ctx.moveTo(0, TABLE_HEIGHT); ctx.lineTo(0, TABLE_HEIGHT / 2); ctx.stroke();
+                    ctx.restore();
+                    railsGlow.left = Math.max(0, railsGlow.left - 1);
+                }
+
+                // Right rail glow: top (magenta) and bottom (cyan)
+                if (alphaRight > 0) {
+                    ctx.save();
+                    ctx.globalAlpha = alphaRight;
+                    ctx.lineWidth = BORDER_WIDTH + 4;
+                    ctx.shadowBlur = 42;
+                    // top half magenta
+                    ctx.strokeStyle = COLOR_BORDER_AI; ctx.shadowColor = COLOR_BORDER_AI;
+                    ctx.beginPath(); ctx.moveTo(TABLE_WIDTH, 0); ctx.lineTo(TABLE_WIDTH, TABLE_HEIGHT / 2); ctx.stroke();
+                    // bottom half cyan
+                    ctx.strokeStyle = COLOR_BORDER_PLAYER; ctx.shadowColor = COLOR_BORDER_PLAYER;
+                    ctx.beginPath(); ctx.moveTo(TABLE_WIDTH, TABLE_HEIGHT); ctx.lineTo(TABLE_WIDTH, TABLE_HEIGHT / 2); ctx.stroke();
+                    ctx.restore();
+                    railsGlow.right = Math.max(0, railsGlow.right - 1);
+                }
+            }
+
+            // --- [JDID] Obstacle dial Level 2 ---
+            const obstacle = {
+                x: TABLE_WIDTH / 2,
+                y: TABLE_HEIGHT / 2,
+                width: Math.max(6, Math.round(10 * SCALE)),  // 3ord
+                height: Math.round(80 * SCALE), // Tol
+                angle: 0,   // Zawya
+                speed: 0.02, // Sor3a dial dwran
+                radius: Math.round(40 * SCALE),  // Nst3mloh l'physics (nos l'height)
+                // Level 6 spin
+                spinAngle: 0,
+                spinSpeed: 0
+            };
+
+            // --- [JDID] Obstacle 2 (Level 5: two rotating bars)
+            const obstacle2 = {
+                x: TABLE_WIDTH / 2,
+                y: TABLE_HEIGHT / 2,
+                width: Math.max(6, Math.round(10 * SCALE)),
+                height: Math.round(80 * SCALE),
+                angle: Math.PI / 2, // bidaya mghayra باش يبانوا جوج
+                speed: -0.025,      // ydor f l'jiha l'khra
+                radius: Math.round(40 * SCALE),
+                // Level 6 spin
+                spinAngle: 0,
+                spinSpeed: 0
+            };
+
+            // --- [JDID] Configure obstacle layout per level ---
+            function setObstacleLayout() {
+                // Default: center
+                obstacle.x = TABLE_WIDTH / 2; obstacle.y = TABLE_HEIGHT / 2;
+                obstacle2.x = TABLE_WIDTH / 2; obstacle2.y = TABLE_HEIGHT / 2;
+                obstacle.radius = Math.round(40 * SCALE);
+                // Reset puck size to default unless level overrides
+                puck.radius = PUCK_RADIUS;
+
+                if (currentLevel === 5) {
+                    const offset = Math.round(TABLE_WIDTH * 0.33); // mferqin أكثر بحال الصورة
+                    obstacle.x = TABLE_WIDTH / 2 - offset; // left
+                    obstacle.y = TABLE_HEIGHT / 2;
+                    obstacle2.x = TABLE_WIDTH / 2 + offset; // right
+                    obstacle2.y = TABLE_HEIGHT / 2;
+                } else if (currentLevel === 6) {
+                    // Joj l'khtout f wst l'table kaytla3o w kaynzlou shwiya
+                    const offset = Math.round(TABLE_WIDTH * 0.18); // qrib l'wst
+                    const baseY = TABLE_HEIGHT / 2;
+                    const amp = Math.round(TABLE_HEIGHT * 0.06); // chwiya up/down
+
+                    obstacle.x = TABLE_WIDTH / 2 - offset; 
+                    obstacle.y = baseY; 
+                    obstacle.baseY = baseY; 
+                    obstacle.oscAmp = amp; 
+                    obstacle.speed = 0.03; // sor3a dial l'oscillation
+                    obstacle.spinAngle = 0; obstacle.spinSpeed = 0;
+
+                    obstacle2.x = TABLE_WIDTH / 2 + offset; 
+                    obstacle2.y = baseY; 
+                    obstacle2.baseY = baseY; 
+                    obstacle2.oscAmp = amp; 
+                    obstacle2.speed = -0.03; // phase mkhalfa
+                    obstacle2.spinAngle = 0; obstacle2.spinSpeed = 0;
+                } else if (currentLevel === 4) {
+                    // Sgher shwiya dial ring f lwst
+                    obstacle.x = TABLE_WIDTH / 2; 
+                    obstacle.y = TABLE_HEIGHT / 2; 
+                    obstacle.radius = Math.round(32 * SCALE);
+                } else if (currentLevel === 7) {
+                    // Level 7: khet kaymshi radi w jay (horizontal) w kaydir spin mlli tdrab l'kora
+                    const baseX = TABLE_WIDTH / 2;
+                    const baseY = TABLE_HEIGHT / 2;
+                    const ampX = Math.round(TABLE_WIDTH * 0.15);
+                    obstacle.baseX = baseX; obstacle.baseY = baseY;
+                    obstacle.oscAmpX = ampX; 
+                    obstacle.x = baseX; obstacle.y = baseY;
+                    obstacle.speed = 0.05; // zdt-ha شوية باش تمشي بْزْرْبة
+                    obstacle.spinAngle = 0; obstacle.spinSpeed = 0; // ybda normal
+                    obstacle.tiltAngle = 0; // horizontal default
+                } else if (currentLevel === 8) {
+                    // Level 8: puck tsghar w tkbar b wa9t — no obstacle changes
+                    puck.baseRadius = puck.radius; // hna n9ido l'asli
+                    puck.scalePhase = 0;
+                } else if (currentLevel === 9) {
+                    // Level 9: l'kora sghira
+                    puck.radius = Math.max(6, Math.round(PUCK_RADIUS * 0.5));
+                    puck.baseRadius = undefined; // ma kaynash scaling hna
+                } else if (currentLevel === 10) {
+                    // Level 10: l'kora sghira bzzaaf w جوج خطوط فوسط الطابلة
+                    puck.radius = Math.max(4, Math.round(PUCK_RADIUS * 0.35));
+                    puck.baseRadius = undefined;
+                    // Centered crossing bars
+                    obstacle.x = TABLE_WIDTH / 2; obstacle.y = TABLE_HEIGHT / 2;
+                    obstacle2.x = TABLE_WIDTH / 2; obstacle2.y = TABLE_HEIGHT / 2;
+                    obstacle.angle = 0;         // horizontal
+                    obstacle2.angle = Math.PI / 2; // vertical
+                    obstacle.speed = 0; obstacle2.speed = 0; // static
+                    // init spin
+                    obstacle.spinAngle = 0; obstacle.spinSpeed = 0;
+                    obstacle2.spinAngle = 0; obstacle2.spinSpeed = 0;
+                }
+            }
+
+            // --- [JDID] Apply spin impulse mlli l'kora tdrab l'bar (Level 6) ---
+            function applySpinImpulse(obs, hitter) {
+                const dir = (hitter.vx >= 0) ? 1 : -1; // jhita 3la 7sab vx
+                obs.spinSpeed = Math.max(-SPIN_MAX, Math.min(SPIN_MAX, obs.spinSpeed + dir * SPIN_IMPULSE));
+            }
+
+            // Objects
+            const player = {
+                x: TABLE_WIDTH / 2,
+                y: TABLE_HEIGHT - PADDLE_RADIUS - 50,
+                radius: PADDLE_RADIUS,
+                color: COLOR_PLAYER
+            };
+
+            const ai = {
+                x: TABLE_WIDTH / 2,
+                y: PADDLE_RADIUS + 50,
+                radius: PADDLE_RADIUS,
+                color: COLOR_AI
+            };
+
+            const puck = {
+                x: TABLE_WIDTH / 2,
+                y: TABLE_HEIGHT / 2,
+                radius: PUCK_RADIUS,
+                color: COLOR_PUCK,
+                vx: 0,
+                vy: 0
+            };
+
+            // 7eydna l'elements dial HTML dial score
+
+            // --- Rsim Jdid ---
+
+            // Rsim dial Chebka (Hexagon)
+            function drawHex(x, y, size) {
+                ctx.beginPath();
+                for (let i = 0; i < 6; i++) {
+                    const px = x + size * Math.cos(i * Math.PI / 3);
+                    const py = y + size * Math.sin(i * Math.PI / 3);
+                    if (i === 0) {
+                        ctx.moveTo(px, py);
+                    } else {
+                        ctx.lineTo(px, py);
+                    }
+                }
+                ctx.closePath();
+                ctx.stroke();
+            }
+
+            // Rsim dial Background b chebka
+            function drawBackground() {
+                // L'K7ol dial l'arrière-plan
+                ctx.fillStyle = '#070a1f';
+                ctx.fillRect(0, 0, TABLE_WIDTH, TABLE_HEIGHT);
+
+                // Chebka
+                ctx.strokeStyle = COLOR_HEX_BG;
+                ctx.lineWidth = 1;
+                const hexSize = 30;
+                const hexHeight = hexSize * Math.sqrt(3);
+                const hexWidth = hexSize * 2;
+                
+                for (let r = -hexHeight; r < TABLE_HEIGHT + hexHeight; r += hexHeight) {
+                    for (let q = -hexWidth; q < TABLE_WIDTH + hexWidth; q += hexWidth * 0.75) {
+                        drawHex(q + (r/hexHeight % 2 === 0 ? 0 : hexWidth * 0.375), r, hexSize / 2);
+                    }
+                }
+            }
+
+            // Rsim dial L'goals
+            function drawGoals() {
+                ctx.strokeStyle = COLOR_GOAL_NET;
+                ctx.lineWidth = 2;
+
+                const goalX = (TABLE_WIDTH - GOAL_WIDTH) / 2;
+
+                // Goal dial AI (lfoq)
+                ctx.beginPath();
+                ctx.moveTo(goalX, 0);
+                ctx.lineTo(goalX, GOAL_HEIGHT);
+                ctx.lineTo(goalX + GOAL_WIDTH, GOAL_HEIGHT);
+                ctx.lineTo(goalX + GOAL_WIDTH, 0);
+                // Chebka
+                for (let i = 1; i < 10; i++) {
+                    ctx.moveTo(goalX + i * (GOAL_WIDTH / 10), 0);
+                    ctx.lineTo(goalX + i * (GOAL_WIDTH / 10), GOAL_HEIGHT);
+                }
+                ctx.stroke();
+                
+                // Goal dial Player (lt7t)
+                ctx.beginPath();
+                ctx.moveTo(goalX, TABLE_HEIGHT);
+                ctx.lineTo(goalX, TABLE_HEIGHT - GOAL_HEIGHT);
+                ctx.lineTo(goalX + GOAL_WIDTH, TABLE_HEIGHT - GOAL_HEIGHT);
+                ctx.lineTo(goalX + GOAL_WIDTH, TABLE_HEIGHT);
+                 // Chebka
+                for (let i = 1; i < 10; i++) {
+                    ctx.moveTo(goalX + i * (GOAL_WIDTH / 10), TABLE_HEIGHT);
+                    ctx.lineTo(goalX + i * (GOAL_WIDTH / 10), TABLE_HEIGHT - GOAL_HEIGHT);
+                }
+                ctx.stroke();
+            }
+
+            // Rsim dial L7itan (Borders)
+            function drawBorders() {
+                ctx.lineWidth = BORDER_WIDTH;
+                
+                // --- L7itan lfoq (AI) ---
+                ctx.strokeStyle = COLOR_BORDER_AI;
+                ctx.shadowColor = COLOR_BORDER_AI;
+                ctx.shadowBlur = 15;
+                
+                // Lfoq 3l lisr
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.lineTo((TABLE_WIDTH - GOAL_WIDTH) / 2, 0);
+                ctx.stroke();
+                // Lfoq 3l limn
+                ctx.beginPath();
+                ctx.moveTo((TABLE_WIDTH + GOAL_WIDTH) / 2, 0);
+                ctx.lineTo(TABLE_WIDTH, 0);
+                ctx.stroke();
+                
+                // Jnab lfoq (Magenta)
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.lineTo(0, TABLE_HEIGHT / 2);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(TABLE_WIDTH, 0);
+                ctx.lineTo(TABLE_WIDTH, TABLE_HEIGHT / 2);
+                ctx.stroke();
+                
+                // --- L7itan lt7t (Player) ---
+                ctx.strokeStyle = COLOR_BORDER_PLAYER;
+                ctx.shadowColor = COLOR_BORDER_PLAYER;
+                ctx.shadowBlur = 15;
+
+                // Lt7t 3l lisr
+                ctx.beginPath();
+                ctx.moveTo(0, TABLE_HEIGHT);
+                ctx.lineTo((TABLE_WIDTH - GOAL_WIDTH) / 2, TABLE_HEIGHT);
+                ctx.stroke();
+                // Lt7t 3l limn
+                ctx.beginPath();
+                ctx.moveTo((TABLE_WIDTH + GOAL_WIDTH) / 2, TABLE_HEIGHT);
+                ctx.lineTo(TABLE_WIDTH, TABLE_HEIGHT);
+                ctx.stroke();
+
+                // Jnab lt7t (Cyan)
+                ctx.beginPath();
+                ctx.moveTo(0, TABLE_HEIGHT);
+                ctx.lineTo(0, TABLE_HEIGHT / 2);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(TABLE_WIDTH, TABLE_HEIGHT);
+                ctx.lineTo(TABLE_WIDTH, TABLE_HEIGHT / 2);
+                ctx.stroke();
+                
+                ctx.shadowBlur = 0; // Nsaffiw shadow
+            }
+
+            // --- [JDID] Borders layout for Level 3 (hourglass shape meeting at midline) ---
+            function drawBordersLevel3() {
+                const pinchInset = 65;            // distance from each side at the pinch
+                const pinchY = TABLE_HEIGHT / 2; // midline Y
+                const topInsetY = 28;             // start offset from top
+                const bottomInsetY = TABLE_HEIGHT - 28; // start offset from bottom
+
+                ctx.lineWidth = BORDER_WIDTH;
+                ctx.lineCap = 'round';
+
+                // Upper half (Magenta)
+                ctx.strokeStyle = COLOR_BORDER_AI;
+                ctx.shadowColor = COLOR_BORDER_AI;
+                ctx.shadowBlur = 18;
+
+                // Left top segment -> pinch
+                ctx.beginPath();
+                ctx.moveTo(22, topInsetY);
+                ctx.lineTo(pinchInset, pinchY);
+                ctx.stroke();
+
+                // Right top segment -> pinch
+                ctx.beginPath();
+                ctx.moveTo(TABLE_WIDTH - 22, topInsetY);
+                ctx.lineTo(TABLE_WIDTH - pinchInset, pinchY);
+                ctx.stroke();
+
+                // Lower half (Cyan)
+                ctx.strokeStyle = COLOR_BORDER_PLAYER;
+                ctx.shadowColor = COLOR_BORDER_PLAYER;
+                ctx.shadowBlur = 18;
+
+                // Left bottom segment -> pinch
+                ctx.beginPath();
+                ctx.moveTo(22, bottomInsetY);
+                ctx.lineTo(pinchInset, pinchY);
+                ctx.stroke();
+
+                // Right bottom segment -> pinch
+                ctx.beginPath();
+                ctx.moveTo(TABLE_WIDTH - 22, bottomInsetY);
+                ctx.lineTo(TABLE_WIDTH - pinchInset, pinchY);
+                ctx.stroke();
+
+                // No goal arcs in Level 3 — keep empty like Levels 1 & 2
+
+                ctx.shadowBlur = 0;
+            }
+            
+            // Rsim dial Kht lwest
+            function drawCenterLine() {
+                ctx.strokeStyle = '#33aaff'; // Nkhliw had loun
+                ctx.shadowColor = '#33aaff';
+                ctx.shadowBlur = 10;
+                ctx.lineWidth = 4;
+
+                // Kht
+                ctx.beginPath();
+                ctx.moveTo(0, TABLE_HEIGHT / 2);
+                ctx.lineTo(TABLE_WIDTH, TABLE_HEIGHT / 2);
+                ctx.stroke();
+                
+                // Da2ira
+                ctx.beginPath();
+                ctx.arc(TABLE_WIDTH / 2, TABLE_HEIGHT / 2, 60, 0, Math.PI * 2, false);
+                ctx.stroke();
+                
+                ctx.shadowBlur = 0;
+            }
+
+            // --- [JDID] Function l Rsim l'Obstacle ---
+            function drawObstacle() {
+                // Nrsmo l'obstacle gha f Levels li fih
+                if (currentLevel !== 2 && currentLevel !== 4 && currentLevel !== 5 && currentLevel !== 6 && currentLevel !== 7 && currentLevel !== 10) return;
+
+                if (currentLevel === 2) {
+                    // Bar kays-dour (Cyan) f lwst
+                    ctx.save();
+                    ctx.translate(obstacle.x, obstacle.y);
+                    ctx.rotate(obstacle.angle);
+                    ctx.fillStyle = 'rgba(0, 255, 255, 0.7)'; // Cyan transparent
+                    ctx.shadowColor = COLOR_BORDER_PLAYER;
+                    ctx.shadowBlur = 10;
+                    ctx.fillRect(-obstacle.width / 2, -obstacle.height / 2, obstacle.width, obstacle.height);
+                    ctx.restore();
+                } else if (currentLevel === 4) {
+                    // Dowara (Ring) f lwst, katbombi l'kora
+                    ctx.save();
+                    ctx.translate(obstacle.x, obstacle.y);
+                    const ringColor = 'rgba(255, 220, 0, 1)'; // Yellow neon
+                    ctx.shadowColor = ringColor;
+                    ctx.shadowBlur = 12;
+                    ctx.lineWidth = Math.max(4, Math.round(8 * SCALE));
+                    ctx.strokeStyle = ringColor;
+
+                    // Ring outline
+                    ctx.beginPath();
+                    ctx.arc(0, 0, obstacle.radius, 0, Math.PI * 2);
+                    ctx.stroke();
+                    ctx.restore();
+                } else if (currentLevel === 5) {
+                    // Joj dial l'khtout (bars) kaydoro w kaytako l'kora — wa7ed f l'imen w wa7ed f l'iser
+                    ctx.fillStyle = 'rgba(0, 255, 255, 0.7)';
+                    ctx.shadowColor = COLOR_BORDER_PLAYER;
+                    ctx.shadowBlur = 10;
+
+                    // Bar 1 (left)
+                    ctx.save();
+                    ctx.translate(obstacle.x, obstacle.y);
+                    ctx.rotate(obstacle.angle);
+                    ctx.fillRect(-obstacle.width / 2, -obstacle.height / 2, obstacle.width, obstacle.height);
+                    ctx.restore();
+
+                    // Bar 2 (right)
+                    ctx.save();
+                    ctx.translate(obstacle2.x, obstacle2.y);
+                    ctx.rotate(obstacle2.angle);
+                    ctx.fillRect(-obstacle2.width / 2, -obstacle2.height / 2, obstacle2.width, obstacle2.height);
+                    ctx.restore();
+                } else if (currentLevel === 6) {
+                    // Joj l'khtout kaytla3o/kaynzlo shwiya f wst l'table
+                    ctx.fillStyle = 'rgba(0, 255, 255, 0.8)';
+                    ctx.shadowColor = COLOR_BORDER_PLAYER; 
+                    ctx.shadowBlur = 10;
+
+                    // Left bar (fixed tilt)
+                    ctx.save();
+                    ctx.translate(obstacle.x, obstacle.y);
+                    ctx.rotate(-Math.PI / 6 + (obstacle.spinAngle || 0)); // -30° + spin
+                    ctx.fillRect(-obstacle.width / 2, -obstacle.height / 2, obstacle.width, obstacle.height);
+                    ctx.restore();
+
+                    // Right bar (fixed tilt)
+                    ctx.save();
+                    ctx.translate(obstacle2.x, obstacle2.y);
+                    ctx.rotate(Math.PI / 6 + (obstacle2.spinAngle || 0)); // 30° + spin
+                    ctx.fillRect(-obstacle2.width / 2, -obstacle2.height / 2, obstacle2.width, obstacle2.height);
+                    ctx.restore();
+                } else if (currentLevel === 7) {
+                    // Khet wahd kayt7rrk w kaydir spin
+                    ctx.fillStyle = 'rgba(0, 255, 255, 0.9)';
+                    ctx.shadowColor = COLOR_BORDER_PLAYER;
+                    ctx.shadowBlur = 10;
+
+                    ctx.save();
+                    ctx.translate(obstacle.x, obstacle.y);
+                    ctx.rotate((obstacle.tiltAngle || 0) + (obstacle.spinAngle || 0));
+                    ctx.fillRect(-obstacle.width / 2, -obstacle.height / 2, obstacle.width, obstacle.height);
+                    ctx.restore();
+                } else if (currentLevel === 10) {
+                    // Joj l'khtout mtsalbin f lwst (cross), static
+                    ctx.fillStyle = 'rgba(0, 255, 255, 0.85)';
+                    ctx.shadowColor = COLOR_BORDER_PLAYER;
+                    ctx.shadowBlur = 10;
+
+                    // Horizontal
+                    ctx.save();
+                    ctx.translate(obstacle.x, obstacle.y);
+                    ctx.rotate(obstacle.angle + (obstacle.spinAngle || 0));
+                    ctx.fillRect(-obstacle.width / 2, -obstacle.height / 2, obstacle.width, obstacle.height);
+                    ctx.restore();
+
+                    // Vertical
+                    ctx.save();
+                    ctx.translate(obstacle2.x, obstacle2.y);
+                    ctx.rotate(obstacle2.angle + (obstacle2.spinAngle || 0));
+                    ctx.fillRect(-obstacle2.width / 2, -obstacle2.height / 2, obstacle2.width, obstacle2.height);
+                    ctx.restore();
+                }
+
+                ctx.shadowBlur = 0; // Nsaffiw shadow
+            }
+
+            // Rsim l'Score f west l'canvas
+            function drawScore() {
+                // Ma nrsmo walu f صفحة البداية
+                if (isOnStartMenu) return;
+                ctx.fillStyle = 'white';
+                ctx.shadowColor = 'white';
+                ctx.shadowBlur = 10;
+                
+                // --- [JDID] Rsm L'Level ---
+                ctx.font = `bold ${Math.round(20 * SCALE)}px Arial`;
+                ctx.textAlign = 'left';
+                ctx.fillText(`Level: ${currentLevel}`, 20, 30); // F l'qent lfoq lisr
+
+                // --- Rsm Score (kima kan) ---
+                ctx.font = `bold ${Math.round(36 * SCALE)}px Arial`;
+                ctx.textAlign = 'center';
+                
+                // AI Score (lfoq)
+                ctx.fillText(aiScore, TABLE_WIDTH / 2, Math.round(50 * SCALE));
+
+                // Player Score (lt7t)
+                ctx.fillText(playerScore, TABLE_WIDTH / 2, TABLE_HEIGHT - Math.round(40 * SCALE));
+                
+                ctx.shadowBlur = 0;
+            }
+
+            // [JDID] HUD updater
+            function updateSideHUD() {
+                if (hudAiEl) hudAiEl.textContent = aiScore;
+                if (hudPlayerEl) hudPlayerEl.textContent = playerScore;
+                if (hudLevelEl) hudLevelEl.textContent = currentLevel;
+            }
+
+            // Function bach nrsmo Ttabla (Mbedla)
+            function drawTable() {
+                drawBackground();
+                drawGoals();
+                if (currentLevel === 3) {
+                    drawBordersLevel3();
+                } else {
+                    drawBorders(); // L7itan f blasset box-shadow
+                }
+                // JDID: overlay rail glow if active
+                drawRailGlow();
+                drawCenterLine();
+            }
+
+            // Nrsmo L'Paddles w L'Puck (Mbedla)
+            function drawElements() {
+                // Ila كنا ف صفحة البداية، nrsmo ghir Ttabla بلا paddles/puck
+                if (isOnStartMenu) return;
+                drawPaddle(player.x, player.y, player.radius, player.color);
+                drawPaddle(ai.x, ai.y, ai.radius, ai.color);
+                drawPuck(puck.x, puck.y, puck.radius, puck.color);
+            }
+
+            // --- L'Logic dial L'Game (Kima kan) ---
+            // [JDID] Hourglass bounds for Level 3: returns left/right X at given Y
+            function getLevel3Bounds(y) {
+                // For other levels, classic rectangle bounds
+                if (currentLevel !== 3) {
+                    return { left: BORDER_WIDTH, right: TABLE_WIDTH - BORDER_WIDTH };
+                }
+                const pinchInset = 65;
+                const pinchY = TABLE_HEIGHT / 2;
+                const topInsetY = 28;
+                const bottomInsetY = TABLE_HEIGHT - 28;
+                let left = BORDER_WIDTH;
+                if (y <= pinchY) {
+                    if (y <= topInsetY) {
+                        left = BORDER_WIDTH;
+                    } else {
+                        const t = (y - topInsetY) / (pinchY - topInsetY);
+                        left = 22 + (pinchInset - 22) * t;
+                    }
+                } else {
+                    if (y >= bottomInsetY) {
+                        left = BORDER_WIDTH;
+                    } else {
+                        const t = (bottomInsetY - y) / (bottomInsetY - pinchY);
+                        left = 22 + (pinchInset - 22) * t;
+                    }
+                }
+                const right = TABLE_WIDTH - left;
+                return { left, right };
+            }
+            
+            function getCanvasPos(e) {
+                const rect = canvas.getBoundingClientRect();
+                const scaleX = canvas.width / rect.width;
+                const scaleY = canvas.height / rect.height;
+
+                let clientX, clientY;
+
+                if (e.touches) {
+                    if (e.touches.length === 0) return { x: player.x, y: player.y }; // Ila mqa touch
+                    clientX = e.touches[0].clientX;
+                    clientY = e.touches[0].clientY;
+                } else {
+                    clientX = e.clientX;
+                    clientY = e.clientY;
+                }
+
+                return {
+                    x: (clientX - rect.left) * scaleX,
+                    y: (clientY - rect.top) * scaleY
+                };
+            }
+
+            function movePlayer(e) {
+                e.preventDefault();
+                const pos = getCanvasPos(e);
+                
+                player.x = pos.x;
+                player.y = pos.y;
+
+                // N7ddo l'player f l'blassa dialo (Lt7t)
+                if (player.y < TABLE_HEIGHT / 2 + player.radius) {
+                    player.y = TABLE_HEIGHT / 2 + player.radius;
+                }
+                if (player.y > TABLE_HEIGHT - player.radius - BORDER_WIDTH) { // N7tarmo l7it
+                    player.y = TABLE_HEIGHT - player.radius - BORDER_WIDTH;
+                }
+                // [JDID] X bounds depend on Y in Level 3
+                const bP = getLevel3Bounds(player.y);
+                const minPlayerX = bP.left + player.radius + BORDER_WIDTH;
+                const maxPlayerX = bP.right - player.radius - BORDER_WIDTH;
+                if (player.x < minPlayerX) player.x = minPlayerX;
+                if (player.x > maxPlayerX) player.x = maxPlayerX;
+            }
+
+            canvas.addEventListener('mousemove', movePlayer);
+            canvas.addEventListener('touchmove', movePlayer);
+            canvas.addEventListener('touchstart', movePlayer);
+
+            function moveAI() {
+                // --- Bdelna l'logic dial AI ---
+                
+                let targetX; // Ghadi n7ddoh f l'logic
+                let targetY; // Ghadi n7ddoh f l'logic
+
+                // --- [JDID] Engage mode: ila l'player qrib mn l'kora ---
+                // Ila l'player qrib mn l'kora f l'wst/lfouk, l'AI kayhajm bach ydhz l'kora lt7t
+                const playerNearPuck = getDistance(player, puck) < 110 && puck.y <= (TABLE_HEIGHT / 2 + 40);
+                if (playerNearPuck && puck.y < TABLE_HEIGHT / 2) {
+                    // Qif mra l'kora (lfouk) باش ydrbha lt7t
+                    targetX = puck.x;
+                    targetY = Math.max(puck.y - ai.radius - 6, ai.radius + BORDER_WIDTH + 5);
+                }
+                else
+                // --- [FIX JDID] L'AI kay bda l'game ---
+                // Ila l'kora waqfa f l'blassa dialo (bdaya dial l'game)
+                if (puck.vx === 0 && puck.vy === 0 && puck.y < TABLE_HEIGHT / 2) {
+                    
+                    // --- [TBDIL L'BUG dial Level 2] ---
+                    // L'AI kan kaydrb l'kora nichan f l'obstacle
+                    // Daba ghadi ydrbha b zawya (angle)
+                    
+                    // [TBDIL] Imchi مباشرة وراء الكورة باش يدفّعها لتحت
+                    targetX = puck.x; 
+                    targetY = Math.max(puck.y - ai.radius - 6, ai.radius + BORDER_WIDTH + 5);
+                }
+                
+                // 2. L'objectif dial Y (Logic Jdid - Defensive)
+                // Ila kant l'kora mor l'AI (mblokia lfoq)
+                else if (puck.y < ai.y && puck.y < TABLE_HEIGHT / 2) {
+                    // Strategy dial L'hrob (Retreat):
+                    
+                    // 1. Rj3 l blassa amina (lt7t chwia)
+                    targetY = ai.radius + 50 + 20; // Rj3 l blassa bdaya + 20px
+                    
+                    // 2. Hrb l l'west dial l'terrain bach tkhwi l'corner
+                    targetX = TABLE_WIDTH / 2; 
+
+                } else {
+                    // Strategy dial L'hojom/Difa3 (Attack/Defense):
+                    
+                    // --- [TBDIL L'Kbir] ---
+                    // Bdlna l'logic bach ybqa defensive kter
+                    // Ghadi ybqa qrib l goal dialo
+                    
+                    // 1. L'blassa l'aslia dialo (Defensive)
+                    let baseTargetY = ai.radius + 60; // Blassa qriba l goal dialo
+                    
+                    // 2. Tbe3 l'kora chwia ila qrbat
+                    // Nst3mlo (puck.y / TABLE_HEIGHT) bach n'influenciw l'blassa
+                    // Kolma l'kora hbtat (puck.y kbrat), kolma l'AI yqrb l'west chwia
+                    // 0.25 = Taux dial t7rrak (chhal ghayhbt)
+                    targetY = baseTargetY + (puck.y * 0.25); 
+                    
+                    // N7ddo blaysto bach mayhbtch kter mn l'kht l'west
+                    if (targetY > TABLE_HEIGHT / 2 - ai.radius) {
+                        targetY = TABLE_HEIGHT / 2 - ai.radius;
+                    }
+
+                    // Tbe3 l'kora f l'3rd (Kima kan)
+                    targetX = puck.x;
+                }
+                
+                // 1. L'objectif dial X (Kima kan, ytb3 l'kora)
+                // 7rk l'AI l l'objectif dialo X
+                if (ai.x < targetX - AI_SPEED) { // Zdna buffer bach maybqach ytr3d
+                    ai.x += AI_SPEED;
+                } else if (ai.x > targetX + AI_SPEED) {
+                    ai.x -= AI_SPEED;
+                }
+                
+                // 7rk l'AI l l'objectif dialo Y
+                if (ai.y < targetY - AI_SPEED) {
+                    ai.y += AI_SPEED; // Hbt lt7t
+                } else if (ai.y > targetY + AI_SPEED) {
+                    ai.y -= AI_SPEED; // Tl3 lfoq
+                }
+
+                // --- T7did L'blassa (Clamping) ---
+                
+                // N7ddo l'AI f l'blassa dialo (Lfoq)
+                if (ai.y > TABLE_HEIGHT / 2 - ai.radius) {
+                    ai.y = TABLE_HEIGHT / 2 - ai.radius;
+                }
+                
+                // 7eydna l'code l'qdim dial "FIX L'BUG"
+                // w 3wndah b t7did 3adi:
+                if (ai.y < ai.radius + BORDER_WIDTH) { // Matls9ch f l7it lfoqani
+                    ai.y = ai.radius + BORDER_WIDTH;
+                }
+                
+                if (ai.x < ai.radius + BORDER_WIDTH) { // N7tarmo l7it
+                    // replaced below by dynamic bounds
+                }
+                if (ai.x > TABLE_WIDTH - ai.radius - BORDER_WIDTH) { // N7tarmo l7it
+                    // replaced below by dynamic bounds
+                }
+
+                // [JDID] X bounds depend on Y in Level 3
+                const bA = getLevel3Bounds(ai.y);
+                const minAIX = bA.left + ai.radius + BORDER_WIDTH;
+                const maxAIX = bA.right - ai.radius - BORDER_WIDTH;
+                if (ai.x < minAIX) ai.x = minAIX;
+                if (ai.x > maxAIX) ai.x = maxAIX;
+
+                // --- [JDID] Nudge: ila l'kora bqa waqfa w l'AI qrib ---
+                if (puck.vx === 0 && puck.vy === 0 && puck.y < TABLE_HEIGHT / 2) {
+                    const distAI = getDistance(puck, ai);
+                    if (distAI < ai.radius + puck.radius + 8) {
+                        // Df3 l'kora باستعمال نفس منطق التصادم
+                        handlePaddleCollision(ai);
+                    }
+                }
+            }
+
+            function getDistance(obj1, obj2) {
+                const dx = obj1.x - obj2.x;
+                const dy = obj1.y - obj2.y;
+                return Math.sqrt(dx * dx + dy * dy);
+            }
+
+            function checkCollisions() {
+                // L'7itan dial lfoq (AI Goal)
+                if (puck.y < puck.radius + BORDER_WIDTH) {
+            if (puck.x > (TABLE_WIDTH - GOAL_WIDTH) / 2 && puck.x < (TABLE_WIDTH + GOAL_WIDTH) / 2) {
+                // Goal l Player!
+                playerScore++;
+                playSound('goal-player');
+                        updateSideHUD();
+                        // --- [JDID] Ntl3o Message "GOAL" ---
+                        goalMessage.text = "GOAL";
+                        goalMessage.color = COLOR_PLAYER; // Loun dial Player (Cyan)
+                        goalMessage.timer = GOAL_MESSAGE_DURATION;
+                        
+                        checkLevelUp(1); // [TBDIL] 1 = player marka
+                    } else {
+                puck.y = puck.radius + BORDER_WIDTH;
+                puck.vy = -puck.vy;
+                playSound('wall');
+                        // JDID: frame glow on top wall hit
+                        triggerRailGlow('top');
+                    }
+                }
+                // L'7itan dial lt7t (Player Goal)
+                else if (puck.y > TABLE_HEIGHT - puck.radius - BORDER_WIDTH) {
+            if (puck.x > (TABLE_WIDTH - GOAL_WIDTH) / 2 && puck.x < (TABLE_WIDTH + GOAL_WIDTH) / 2) {
+                // Goal l AI!
+                aiScore++;
+                playSound('goal-ai');
+                        updateSideHUD();
+                        // --- [JDID] Ntl3o Message "GOAL" ---
+                        goalMessage.text = "GOAL";
+                        goalMessage.color = COLOR_AI; // Loun dial AI (Magenta)
+                        goalMessage.timer = GOAL_MESSAGE_DURATION;
+                        
+                        checkLevelUp(2); // [TBDIL] 2 = AI marka
+                    } else {
+                puck.y = TABLE_HEIGHT - puck.radius - BORDER_WIDTH;
+                puck.vy = -puck.vy;
+                playSound('wall');
+                        // JDID: frame glow on bottom wall hit
+                        triggerRailGlow('bottom');
+                    }
+                }
+                
+                // L'7itan dial jnab (Level 3 hourglass bounds)
+                const bPuck = getLevel3Bounds(puck.y);
+                const minPuckX = bPuck.left + puck.radius + BORDER_WIDTH;
+                const maxPuckX = bPuck.right - puck.radius - BORDER_WIDTH;
+                if (puck.x < minPuckX) {
+                puck.x = minPuckX;
+                puck.vx = -puck.vx;
+                playSound('wall');
+                    // JDID: spawn pink burst on left wall hit
+                    spawnWallBurst('left', bPuck.left + BORDER_WIDTH, puck.y);
+                    triggerRailGlow('left');
+                } else if (puck.x > maxPuckX) {
+                puck.x = maxPuckX;
+                puck.vx = -puck.vx;
+                playSound('wall');
+                    // JDID: spawn blue burst on right wall hit
+                    spawnWallBurst('right', bPuck.right - BORDER_WIDTH, puck.y);
+                    triggerRailGlow('right');
+                }
+
+                // Collision dial Puck m3a L'Paddles
+                const distPlayer = getDistance(puck, player);
+                if (distPlayer < puck.radius + player.radius) {
+                    handlePaddleCollision(player);
+                }
+                
+                const distAI = getDistance(puck, ai);
+                if (distAI < puck.radius + ai.radius) {
+                    handlePaddleCollision(ai);
+                }
+
+                // --- [JDID] Collision m3a L'Obstacle ---
+                checkObstacleCollision();
+            }
+            
+            function handlePaddleCollision(paddle) {
+                playSound('paddle');
+                const dx = puck.x - paddle.x;
+                const dy = puck.y - paddle.y;
+                const angle = Math.atan2(dy, dx);
+                const base = getMaxPuckSpeed();
+                const isRealPaddle = (paddle === player || paddle === ai);
+                const speed = isRealPaddle ? base * PADDLE_HIT_SPEED_SCALE : base;
+                puck.vx = Math.cos(angle) * speed;
+                puck.vy = Math.sin(angle) * speed;
+
+                // Ndbzo l'kora chwia bach matls9ch
+                puck.x = paddle.x + (paddle.radius + puck.radius + 1) * Math.cos(angle);
+                puck.y = paddle.y + (paddle.radius + puck.radius + 1) * Math.sin(angle);
+            }
+
+            // --- [JDID] Max speed mabni 3la timer dial slow ---
+            function getMaxPuckSpeed() {
+                return puckSlowTimer > 0 ? MAX_PUCK_SPEED * 0.6 : MAX_PUCK_SPEED;
+            }
+
+            // --- [JDID] Function l'collision dial L'Obstacle ---
+            function checkObstacleCollision() {
+                // Collision f Levels li fih l'obstacle
+                if (currentLevel !== 2 && currentLevel !== 4 && currentLevel !== 5 && currentLevel !== 6 && currentLevel !== 7 && currentLevel !== 10) return;
+
+                // Nst3mlo l'physics dial "circle" (半径) bach ykon sahl
+                // N7sbo l'masafa bin l'kora w l'west dial l'obstacle
+                const dist = getDistance(puck, { x: obstacle.x, y: obstacle.y });
+
+                // Qas l'obstacle
+                if (dist < puck.radius + obstacle.radius) {
+                    // Bounce logic
+                    handlePaddleCollision({ x: obstacle.x, y: obstacle.y, radius: obstacle.radius });
+                    // Level 6/7/10: zid spin impulse
+                    if (currentLevel === 6 || currentLevel === 7 || currentLevel === 10) applySpinImpulse(obstacle, puck);
+                }
+
+                // Levels 5/6/10: tcheck l'obstacle tani
+                if (currentLevel === 5 || currentLevel === 6 || currentLevel === 10) {
+                    const dist2 = getDistance(puck, { x: obstacle2.x, y: obstacle2.y });
+                    if (dist2 < puck.radius + obstacle2.radius) {
+                        handlePaddleCollision({ x: obstacle2.x, y: obstacle2.y, radius: obstacle2.radius });
+                        // Level 6/7/10: zid spin impulse tani
+                        if (currentLevel === 6 || currentLevel === 7 || currentLevel === 10) applySpinImpulse(obstacle2, puck);
+                    }
+                }
+            }
+
+            
+            // --- [JDID] Function l check dial l'Level Up ---
+            function checkLevelUp(lastScorer) { // 1 = player, 2 = ai
+                let roundOver = false;
+
+                // Check l'rb7
+                if (playerScore >= WINNING_SCORE) {
+                    // Rb7: وقف اللعب وبيّن Overlay ديال الفوز
+                    playSound('win');
+                    if (winScoreEl) winScoreEl.textContent = `${playerScore}:${aiScore}`;
+                    // Submit result on-chain for AI-judged XP (GenLayer).
+                    try {
+                        window.GenClashChain?.recordResult?.({
+                            playerScore, aiScore,
+                            level: currentLevel,
+                            summary: `Win at level ${currentLevel}`,
+                        });
+                    } catch(_) {}
+                    // If final level reached, show congratulations overlay instead
+                    if (currentLevel >= TOTAL_LEVELS){
+                        const congrats = document.getElementById('congratsOverlay');
+                        if (congrats) congrats.style.display = 'grid';
+                    } else {
+                        if (winOverlay) winOverlay.style.display = 'grid';
+                    }
+                    isPaused = true;
+                    return; // نستناو ضغط "NEXT LEVEL" أو "PLAY AGAIN" ف الأخير
+                } else if (aiScore >= WINNING_SCORE) {
+                    // Khsert: وقف اللعب وبيّn Overlay
+                    playSound('lose');
+                    if (loseScoreEl) loseScoreEl.textContent = `${playerScore}:${aiScore}`;
+                    // Submit result on-chain for AI-judged XP (GenLayer).
+                    try {
+                        window.GenClashChain?.recordResult?.({
+                            playerScore, aiScore,
+                            level: currentLevel,
+                            summary: `Loss at level ${currentLevel}`,
+                        });
+                    } catch(_) {}
+                    currentLevel = 1;
+                    if (loseOverlay) loseOverlay.style.display = 'grid';
+                    isPaused = true;
+                    return; // مانكمّلوش الريسيت حتى يضغط اللاعب
+                }
+
+                if (roundOver) {
+                    playerScore = 0;
+                    aiScore = 0;
+                    obstacle.angle = 0; // Nsaffiw l'obstacle
+                    // Nqdro nziw message hna "Level X"
+                    updateSideHUD();
+                }
+
+                // Reset l'puck f kol 7ala (b starter)
+                // Li marka l'bit, l'akhur ybda
+                // --- [FIX L'BUG] --- Hada howa l'islah
+                resetPuck(lastScorer === 1 ? 2 : 1); 
+            }
+
+            // --- [JDID] HADO KANO NAQSIN ---
+
+            function movePuck() {
+                puck.x += puck.vx;
+                puck.y += puck.vy;
+
+                // Nqso chwia l'sor3a (Friction)
+                puck.vx *= 0.995;
+                puck.vy *= 0.995;
+
+                // N7bso l'kora ila bqat bota2
+                if (Math.abs(puck.vx) < 0.1) puck.vx = 0;
+                if (Math.abs(puck.vy) < 0.1) puck.vy = 0;
+
+                // Nqss timer dial slow
+                if (puckSlowTimer > 0) puckSlowTimer--;
+            }
+
+            function resetPuck(starter) { // 1 = player ybda, 2 = ai ybda
+                puck.x = TABLE_WIDTH / 2;
+                puck.vx = 0;
+                puck.vy = 0;
+                
+                if (starter === 1) { // Player ybda (mn lfoq)
+                    puck.y = TABLE_HEIGHT / 2 + 100;
+                } else { // AI ybda (mn lt7t)
+                    puck.y = TABLE_HEIGHT / 2 - 100;
+                }
+
+                // Bidaya: n9ss sor3a wahd taniya
+                puckSlowTimer = PUCK_SLOW_FRAMES;
+            }
+
+            // --- [JDID] Function l Rsim dial "GOAL" ---
+            function drawGoalMessage() {
+                if (goalMessage.timer <= 0) return; // Ila makanch message
+
+                // L'ktaba dial "GOAL" b7al f teswira (Sfr w 3ndo glow)
+                const text = goalMessage.text;
+                
+                // Nqso l'timer
+                goalMessage.timer--;
+                
+                // Calculate opacity (bach ybda ykhtafi) على مدار المدة كاملة
+                const alpha = Math.max(0, goalMessage.timer / GOAL_MESSAGE_DURATION);
+
+                ctx.save();
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                
+                // Style: Sfr b glow kbir w outline k7l chwia
+                ctx.font = `bold ${Math.round(80 * SCALE)}px Arial`;
+                ctx.fillStyle = `rgba(255, 220, 0, ${alpha})`; // Sfr/Orangi
+                
+                // L'Glow
+                ctx.shadowColor = `rgba(255, 255, 255, ${alpha * 0.7})`; // Glow byd
+                ctx.shadowBlur = 30;
+                
+                // L'Outline (K7l)
+                ctx.strokeStyle = `rgba(0, 0, 0, ${alpha * 0.5})`;
+                ctx.lineWidth = 5;
+
+                // Rsm l'outline w l'ktaba
+                ctx.strokeText(text, TABLE_WIDTH / 2, TABLE_HEIGHT / 2);
+                ctx.fillText(text, TABLE_WIDTH / 2, TABLE_HEIGHT / 2);
+
+                ctx.restore();
+            }
+
+            // L'Game Loop (L'7alaqa dial L'game)
+            function gameLoop() {
+                // --- [JDID] T7rik l'obstacle ---
+                if ((currentLevel === 2 || currentLevel === 4 || currentLevel === 5 || currentLevel === 6 || currentLevel === 7 || currentLevel === 10) && !isPaused) {
+                    // Levels 2/4/5: rotation
+                    obstacle.angle += obstacle.speed;
+                    if (currentLevel === 5) {
+                        obstacle2.angle += obstacle2.speed;
+                    }
+                    // Level 6: vertical oscillation around baseY
+                    if (currentLevel === 6) {
+                        obstacle.y = (obstacle.baseY || TABLE_HEIGHT / 2) + (obstacle.oscAmp || Math.round(TABLE_HEIGHT * 0.06)) * Math.sin(obstacle.angle);
+                        obstacle2.y = (obstacle2.baseY || TABLE_HEIGHT / 2) + (obstacle2.oscAmp || Math.round(TABLE_HEIGHT * 0.06)) * Math.sin(-obstacle.angle);
+                        // w spin kayt7arak w kaytchdd dampping
+                        obstacle.spinAngle += obstacle.spinSpeed;
+                        obstacle.spinSpeed *= SPIN_DAMPING;
+                        if (Math.abs(obstacle.spinSpeed) < 0.001) obstacle.spinSpeed = 0;
+
+                        obstacle2.spinAngle += obstacle2.spinSpeed;
+                        obstacle2.spinSpeed *= SPIN_DAMPING;
+                        if (Math.abs(obstacle2.spinSpeed) < 0.001) obstacle2.spinSpeed = 0;
+                    } else if (currentLevel === 7) {
+                        // Horizontal oscillation around center
+                        const bX = obstacle.baseX || (TABLE_WIDTH / 2);
+                        const ampX = obstacle.oscAmpX || Math.round(TABLE_WIDTH * 0.15);
+                        obstacle.x = bX + ampX * Math.sin(obstacle.angle);
+                        // Spin physics: spring back to 0 with damping
+                        obstacle.spinAngle += obstacle.spinSpeed;
+                        obstacle.spinSpeed += -(obstacle.spinAngle) * SPIN_SPRING;
+                        obstacle.spinSpeed *= SPIN_DAMPING;
+                        if (Math.abs(obstacle.spinAngle) < 0.0005 && Math.abs(obstacle.spinSpeed) < 0.0005) {
+                            obstacle.spinAngle = 0; obstacle.spinSpeed = 0;
+                        }
+                    } else if (currentLevel === 10) {
+                        // Only spin damping for both bars
+                        obstacle.spinAngle += obstacle.spinSpeed;
+                        obstacle.spinSpeed *= SPIN_DAMPING;
+                        if (Math.abs(obstacle.spinSpeed) < 0.001) obstacle.spinSpeed = 0;
+
+                        obstacle2.spinAngle += obstacle2.spinSpeed;
+                        obstacle2.spinSpeed *= SPIN_DAMPING;
+                        if (Math.abs(obstacle2.spinSpeed) < 0.001) obstacle2.spinSpeed = 0;
+                    }
+                }
+
+                // --- [JDID] Level 8: Animate puck size ---
+                if (currentLevel === 8 && !isPaused) {
+                    puck.scalePhase = (puck.scalePhase || 0) + PUCK_SCALE_SPEED;
+                    const t = 0.5 + 0.5 * Math.sin(puck.scalePhase);
+                    const baseR = puck.baseRadius || PUCK_RADIUS;
+                    const target = baseR * (PUCK_SCALE_MIN + (PUCK_SCALE_MAX - PUCK_SCALE_MIN) * t);
+                    puck.radius = Math.max(6, Math.round(target));
+                }
+
+                if (!isPaused) {
+                    movePuck();
+                    checkCollisions();
+                    moveAI();
+                }
+                
+                drawTable();
+                if (currentLevel === 2 || currentLevel === 4 || currentLevel === 5 || currentLevel === 6 || currentLevel === 7 || currentLevel === 10) drawObstacle(); // <-- Rsm l'obstacle f Level 2/4/5/6/7/10
+                drawElements();
+                // JDID: draw wall hit bursts on top of elements
+                updateAndDrawWallBursts();
+                drawScore(); // Nrsmo l'score f kol frame
+                
+                // --- [JDID] Nrsmo Message "GOAL" ---
+                drawGoalMessage(); 
+                
+                requestAnimationFrame(gameLoop);
+            }
+
+            // --- Game flow (GenLayer-only) ---
+            // Wallet + payment is fully handled by the GenLayer module above
+            // (see window.GenClashChain). This script only manages local UI.
+
+            function startGameDirect() {
+                if (startMenu) startMenu.style.display = 'none';
+                isOnStartMenu = false;
+                stopMenuMusic();
+                stopAmbient();
+                isPaused = false; updatePauseUI();
+                if (hudPanel) hudPanel.style.display = 'block';
+                if (settingsPanel) settingsPanel.style.display = 'none';
+                setObstacleLayout();
+                resetPuck(1);
+            }
+            // Exposed for the GenLayer module to call after a successful pay_to_play tx.
+            window.startGameDirect = startGameDirect;
+
+            // Restart from Lose overlay: re-pay 0.001 GEN, then reset the match.
+            function restartAfterLose() {
+                if (loseOverlay) loseOverlay.style.display = 'none';
+                playerScore = 0; aiScore = 0; updateSideHUD();
+                goalMessage.timer = 0;
+                isPaused = false;
+                resetPuck(1);
+                updatePauseUI();
+            }
+            const btnRestart = document.getElementById('btnRestart');
+            async function restartWithFee(event){
+                if (event){ event.preventDefault(); event.stopImmediatePropagation(); }
+                const chain = window.GenClashChain;
+                if (!chain || !chain.connected){
+                    if (loseSubEl) loseSubEl.textContent = 'Connect wallet to restart.';
+                    return;
+                }
+                if (btnRestart){ btnRestart.disabled = true; btnRestart.textContent = 'PROCESSING...'; }
+                try{
+                    chain.setStatus?.('Approve 0.001 GEN to play again...');
+                    await chain.payToPlay();
+                    if (loseSubEl) loseSubEl.textContent = 'Press Restart to play again';
+                    restartAfterLose();
+                }catch(e){
+                    console.error('Restart payment error:', e);
+                    if (loseSubEl) loseSubEl.textContent = 'Payment failed or rejected. Try again.';
+                }finally{
+                    if (btnRestart){ btnRestart.textContent = 'RESTART'; btnRestart.disabled = false; }
+                }
+            }
+            if (btnRestart){
+                btnRestart.addEventListener('click', restartWithFee, { capture: true });
+                btnRestart.addEventListener('touchstart', (e)=>{ e.preventDefault(); restartWithFee(e); }, { capture: true });
+            }
+
+            // [JDID] Proceed to next level on win
+            function proceedNextLevel() {
+                // If already at final level, show congratulations and do not advance
+                if (currentLevel >= TOTAL_LEVELS){
+                    if (winOverlay) winOverlay.style.display = 'none';
+                    const congrats = document.getElementById('congratsOverlay');
+                    if (congrats) congrats.style.display = 'grid';
+                    return;
+                }
+                if (winOverlay) winOverlay.style.display = 'none';
+                playerScore = 0; aiScore = 0; obstacle.angle = 0; obstacle2.angle = 0; updateSideHUD();
+                currentLevel++; // ندوز المستوى الموالي
+                maxUnlockedLevel = Math.max(maxUnlockedLevel, currentLevel);
+                isPaused = false;
+                setObstacleLayout();
+                resetPuck(1);
+                updatePauseUI();
+            }
+            // Play Again after final congratulations
+            const congratsOverlay = document.getElementById('congratsOverlay');
+            const btnPlayAgain10 = document.getElementById('btnPlayAgain10');
+            function playAgainFromStart(){
+                if (congratsOverlay) congratsOverlay.style.display = 'none';
+                playerScore = 0; aiScore = 0; obstacle.angle = 0; obstacle2.angle = 0; updateSideHUD();
+                currentLevel = 1;
+                isPaused = false;
+                setObstacleLayout();
+                resetPuck(1);
+                updatePauseUI();
+            }
+            if (btnPlayAgain10){
+                btnPlayAgain10.addEventListener('click', playAgainFromStart);
+                btnPlayAgain10.addEventListener('touchstart', (e)=>{ e.preventDefault(); playAgainFromStart(); });
+            }
+            if (btnNextLevel) btnNextLevel.addEventListener('click', proceedNextLevel);
+
+            // DEV button wiring
+            if (DEV_MODE && btnDev){ btnDev.style.display = 'inline-block'; btnDev.addEventListener('click', showLevelsOverlay); }
+            if (btnCloseLevels){ btnCloseLevels.addEventListener('click', hideLevelsOverlay); }
+
+            // --- [JDID] Levels overlay rendering & logic ---
+            function renderLevelsGrid(count = TOTAL_LEVELS) {
+                if (!levelsGrid) return;
+                levelsGrid.innerHTML = '';
+                const cols = 4;
+                const rows = Math.ceil(count / cols);
+                for (let r = 0; r < rows; r++) {
+                    const start = r * cols + 1;
+                    const end = Math.min(start + cols - 1, count);
+                    // Append in natural order so incomplete last row stays left-aligned
+                    for (let n = start; n <= end; n++) {
+                        const btn = document.createElement('button');
+                        btn.type = 'button';
+                        btn.className = 'level-item' + (n === currentLevel ? ' active' : '') + (n > maxUnlockedLevel ? ' locked' : '');
+                        btn.textContent = n;
+                        if (n <= maxUnlockedLevel) {
+                            btn.addEventListener('click', () => selectLevel(n));
+                        }
+                        levelsGrid.appendChild(btn);
+                    }
+                }
+            }
+
+            function showLevelsOverlay() {
+                if (levelsOverlay) levelsOverlay.style.display = 'grid';
+                renderLevelsGrid();
+            }
+
+            function hideLevelsOverlay() { if (levelsOverlay) levelsOverlay.style.display = 'none'; }
+
+            function selectLevel(level) {
+                currentLevel = level;
+                updateSideHUD();
+                hideLevelsOverlay();
+                isPaused = false;
+                playerScore = 0; aiScore = 0; obstacle.angle = 0; obstacle2.angle = 0;
+                setObstacleLayout();
+                resetPuck(1);
+                updatePauseUI();
+            }
+
+            // مستويات محذوفة: خليه يبقى فستارت ولا يبدا مباشرة
+            // نخلي القائمة البداية ظاهرة باش تبدا منها
+
+            // --- DEV: unlock next level quickly ---
+            if (DEV_MODE && devUnlockBtn) {
+                devUnlockBtn.style.display = 'inline-block';
+                devUnlockBtn.addEventListener('click', () => {
+                    maxUnlockedLevel = Math.min(maxUnlockedLevel + 1, TOTAL_LEVELS);
+                    renderLevelsGrid();
+                });
+            }
+
+            // Sync pause button text with initial state
+            updatePauseUI();
+
+            // Rsim dial L'Paddles (Function naqsa)
+            function drawPaddle(x, y, radius, color) {
+                // Da2ira l'kbira (l'base)
+                ctx.fillStyle = color;
+                ctx.beginPath();
+                ctx.arc(x, y, radius, 0, Math.PI * 2, false);
+                ctx.fill();
+
+                // L'Glow
+                ctx.shadowColor = color;
+                ctx.shadowBlur = 15;
+                ctx.fill(); // N3awdo l'fill bach ykhd l'glow
+                ctx.shadowBlur = 0; // Nsaffiw shadow
+
+                // Da2ira l'wstania (l'dakhl)
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.4)'; // K7l chfaf
+                ctx.beginPath();
+                ctx.arc(x, y, radius * 0.7, 0, Math.PI * 2, false);
+                ctx.fill();
+            }
+
+            // Rsim dial L'Puck (Function naqsa)
+            function drawPuck(x, y, radius, color) {
+                // L'Glow (l'kbir)
+                ctx.shadowColor = color;
+                ctx.shadowBlur = 20;
+
+                // L'Base
+                ctx.fillStyle = color;
+                ctx.beginPath();
+                ctx.arc(x, y, radius, 0, Math.PI * 2, false);
+                ctx.fill();
+
+                ctx.shadowBlur = 0; // Nsaffiw shadow
+            }
+            
+            // Bda L'Game
+            // Bidaya: ma nebdewch 7ta yklick
+            updateSideHUD();
+            requestAnimationFrame(gameLoop);
+        });
+    </script>
+    </body>
+    </html>

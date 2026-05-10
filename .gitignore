@@ -1,0 +1,31 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*~
+
+# Node / tooling (if a build chain is added later)
+node_modules/
+dist/
+build/
+.pnpm-store/
+.cache/
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Python (if local tooling around the IC)
+__pycache__/
+*.pyc
+.venv/
+venv/
