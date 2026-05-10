@@ -68,19 +68,19 @@ class GenClashArena(gl.Contract):
         self.total_matches = u256(0)
         self.total_fees_collected = u256(0)
 
-    # ---- Payable entry ---------------------------------------------------
+    # ---- Optional sponsor tip (free to play; any payable value accepted) -
     @gl.public.write.payable
     def pay_to_play(self) -> None:
-        """User pays the entry fee to unlock one match."""
-        if int(gl.message.value) < ENTRY_FEE_WEI:
-            raise gl.vm.UserError(
-                f"Entry fee is {ENTRY_FEE_WEI} wei (0.001 GEN)"
-            )
+        """Optional sponsor tip. Any value (including zero) is accepted and
+        recorded as an active session so the player can submit results.
+        Kept as a legacy entrypoint for frontends that want to show a tip UI.
+        """
         sender = gl.message.sender_address
         self.paid_sessions[sender] = u256(1)
-        self.total_fees_collected = u256(
-            int(self.total_fees_collected) + int(gl.message.value)
-        )
+        if int(gl.message.value) > 0:
+            self.total_fees_collected = u256(
+                int(self.total_fees_collected) + int(gl.message.value)
+            )
 
     # ---- Match result submission (AI-judged via Optimistic Democracy) ----
     @gl.public.write
@@ -97,10 +97,8 @@ class GenClashArena(gl.Contract):
         XP_VALIDATION_MARGIN of the leader's score.
         """
         player = gl.message.sender_address
-        if int(self.paid_sessions.get(player, u256(0))) == 0:
-            raise gl.vm.UserError(
-                "No paid session. Call pay_to_play() first."
-            )
+        # Free to play: no entry fee required, no session gating.
+        # Anyone can submit a match result; the AI judge decides the XP.
 
         # Sanitize inputs (defense in depth - GenVM also enforces types).
         ps = max(0, min(99, int(player_score)))
@@ -156,9 +154,7 @@ Respond strictly as compact JSON: {{"xp": <int>, "reason": "<<=80 chars>"}}.
         verdict = gl.vm.run_nondet_unsafe(leader_fn, validator_fn)
         awarded = max(0, min(MAX_XP_PER_MATCH, int(verdict["xp"])))
 
-        # Consume session and update state (deterministic - safe outside nondet).
-        self.paid_sessions[player] = u256(0)
-
+        # Update state (deterministic - safe outside nondet).
         prior = int(self.xp.get(player, u256(0)))
         if prior == 0:
             self.players.append(player)

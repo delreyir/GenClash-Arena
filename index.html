@@ -316,6 +316,27 @@
             direction: ltr; unicode-bidi: isolate;
         }
 
+        /* Faucet CTA */
+        .faucet-link {
+            margin-top: 12px;
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 10px 14px;
+            border-radius: 10px;
+            background: linear-gradient(90deg, rgba(127, 255, 168, 0.08), rgba(102, 225, 255, 0.06));
+            border: 1px dashed rgba(127, 255, 168, 0.35);
+            color: #cfeaff;
+            text-decoration: none;
+            font: 600 11px 'JetBrains Mono', monospace;
+            letter-spacing: 0.5px;
+            transition: background 0.18s ease, border-color 0.18s ease;
+        }
+        .faucet-link span { opacity: 0.75; }
+        .faucet-link b { color: #7fffa8; font-weight: 700; }
+        .faucet-link:hover {
+            background: linear-gradient(90deg, rgba(127, 255, 168, 0.16), rgba(102, 225, 255, 0.10));
+            border-color: rgba(127, 255, 168, 0.55);
+        }
+
         /* Footer */
         .menu-footer {
             margin-top: 16px; padding-top: 14px;
@@ -513,8 +534,8 @@
                     <div class="stat-value cyan">Bradbury</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-label">Entry Fee</div>
-                    <div class="stat-value">0.001 GEN</div>
+                    <div class="stat-label">Entry</div>
+                    <div class="stat-value" style="color:#7fffa8;">Free</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-label">Mode</div>
@@ -532,6 +553,11 @@
                 <span id="walletMsg"></span>
             </div>
 
+            <a class="faucet-link" href="https://testnet-faucet.genlayer.foundation" target="_blank" rel="noopener">
+                <span>Need testnet GEN?</span>
+                <b>Get free GEN from the faucet →</b>
+            </a>
+
             <div class="menu-footer">
                 <span class="left">/// AI Consensus</span>
                 <span class="right">v0.1 · Testnet</span>
@@ -545,7 +571,11 @@
             <div class="result-title">YOU LOSE</div>
             <div class="result-score" id="loseScore">0:3</div>
             <div class="result-sub" id="loseSub">Press Restart to play again</div>
-            <button class="menu-btn" id="btnRestart">RESTART</button>
+            <button class="menu-btn primary" id="btnRestart">RESTART</button>
+            <a class="faucet-link" style="margin-top:14px; min-width:260px;" href="https://testnet-faucet.genlayer.foundation" target="_blank" rel="noopener">
+                <span>Low on GEN?</span>
+                <b>Get faucet →</b>
+            </a>
         </div>
     </div>
 
@@ -739,22 +769,13 @@
           setStatus('Connect your wallet first.');
           return;
         }
-        setStatus('Approve 0.001 GEN entry fee in your wallet...');
-        if (btnStart){ btnStart.disabled = true; btnStart.textContent = 'PROCESSING...'; }
-        try{
-          await payToPlay();
-          setStatus('Tx submitted. Starting match...');
-          try{ window.startGameDirect?.(); }catch(_){}
-          const sm = document.getElementById('startMenu');
-          if (sm) sm.style.display = 'none';
-        }catch(e){
-          console.error('Payment error:', e);
-          setStatus(e?.message?.includes('configured')
-            ? 'Contract address not set in index.html.'
-            : 'Payment failed or rejected.');
-        }finally{
-          if (btnStart){ btnStart.textContent = 'START GAME'; btnStart.disabled = false; }
-        }
+        // Free to play. No entry fee, no blockchain roundtrip at start.
+        // Each completed level submits a lightweight record_result tx.
+        matchStartTs = Date.now();
+        setStatus('Match started. Results are judged by AI validators per level.');
+        try{ window.startGameDirect?.(); }catch(_){}
+        const sm = document.getElementById('startMenu');
+        if (sm) sm.style.display = 'none';
       }
 
       // ---- Submit match result for AI-judged XP ------------------------
@@ -2377,29 +2398,13 @@ const PADDLE_RADIUS = Math.round(38 * SCALE); // enlarged player & AI paddles
                 updatePauseUI();
             }
             const btnRestart = document.getElementById('btnRestart');
-            async function restartWithFee(event){
+            function restartFreeFlow(event){
                 if (event){ event.preventDefault(); event.stopImmediatePropagation(); }
-                const chain = window.GenClashChain;
-                if (!chain || !chain.connected){
-                    if (loseSubEl) loseSubEl.textContent = 'Connect wallet to restart.';
-                    return;
-                }
-                if (btnRestart){ btnRestart.disabled = true; btnRestart.textContent = 'PROCESSING...'; }
-                try{
-                    chain.setStatus?.('Approve 0.001 GEN to play again...');
-                    await chain.payToPlay();
-                    if (loseSubEl) loseSubEl.textContent = 'Press Restart to play again';
-                    restartAfterLose();
-                }catch(e){
-                    console.error('Restart payment error:', e);
-                    if (loseSubEl) loseSubEl.textContent = 'Payment failed or rejected. Try again.';
-                }finally{
-                    if (btnRestart){ btnRestart.textContent = 'RESTART'; btnRestart.disabled = false; }
-                }
+                restartAfterLose();
             }
             if (btnRestart){
-                btnRestart.addEventListener('click', restartWithFee, { capture: true });
-                btnRestart.addEventListener('touchstart', (e)=>{ e.preventDefault(); restartWithFee(e); }, { capture: true });
+                btnRestart.addEventListener('click', restartFreeFlow, { capture: true });
+                btnRestart.addEventListener('touchstart', (e)=>{ e.preventDefault(); restartFreeFlow(e); }, { capture: true });
             }
 
             // [JDID] Proceed to next level on win
