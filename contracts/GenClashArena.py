@@ -2,7 +2,7 @@
 """
 GenClash Arena - Intelligent Contract for GenLayer
 ==================================================
-Progression-based neon air-hockey arcade with per-level on-chain transactions
+Progression-based on-chain arcade with per-level transactions
 and a public leaderboard ranked by highest level reached.
 
 Flow (2 tx per level, both cheap, no LLM in the critical path):
@@ -73,7 +73,7 @@ class GenClashArena(gl.Contract):
         self.owner = gl.message.sender_address
         self.current_week = u256(0)
         self.weekly_theme = (
-            "Week 0 - Classic Neon Hockey: standard pucks, standard paddles, "
+            "Week 0 - Classic Arena: standard layout, standard paddles, "
             "standard glory."
         )
         self.total_matches = u256(0)
@@ -182,7 +182,7 @@ class GenClashArena(gl.Contract):
         clean = (summary or "")[:500]
         theme = self.weekly_theme
         prompt = f"""
-You are the official AI judge for GenClash Arena, a neon air-hockey arcade
+You are the official AI judge for GenClash Arena, an on-chain arcade
 running on the GenLayer blockchain. Award a FULL-RUN BONUS (0..{MAX_RUN_BONUS_XP})
 for a player who completed all 10 standard levels.
 
@@ -231,7 +231,7 @@ Respond strictly as compact JSON: {{"xp": <int>, "reason": "<<=80 chars>"}}.
         the new theme is well-formed and non-abusive.
         """
         prompt = (
-            "Generate a fun weekly modifier for GenClash Arena, a neon air-hockey "
+            "Generate a fun weekly modifier for GenClash Arena, an on-chain "
             "arcade game. Must be safe-for-work, under 140 characters, and "
             "evocative of a gameplay twist (e.g. 'low gravity', 'fog of war', "
             "'double puck mayhem'). Respond strictly as JSON: "

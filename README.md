@@ -1,8 +1,8 @@
 # GenClash Arena
 
-> Neon air-hockey, judged by AI validators on **GenLayer**.
+> On-chain arcade, judged by AI validators on **GenLayer**.
 
-A neon air-hockey arcade running on the **GenLayer Bradbury testnet**. Match
+An on-chain arcade running on the **GenLayer Bradbury testnet**. Match
 results are judged by AI validators through GenLayer's **Optimistic Democracy**
 consensus, and XP is distributed on-chain via an Intelligent Contract.
 
