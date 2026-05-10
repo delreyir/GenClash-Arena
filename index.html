@@ -232,23 +232,81 @@
         }
         .stat-value.cyan { color: #66e1ff; text-shadow: 0 0 8px rgba(100, 220, 255, 0.45); }
 
-        /* Decorative pucks (smaller, integrated above title) */
-        .hero-icons { display: flex; gap: 16px; align-items: center; justify-content: center; margin-bottom: 14px; }
-        .puck { position: relative; width: 24px; height: 24px; border-radius: 50%;
-            animation: floatY 3.4s ease-in-out infinite, glowPulse 2.4s ease-in-out infinite; }
-        .puck::after { content: ""; position: absolute; inset: 4px; border-radius: 50%;
-            background: rgba(255,255,255,0.9); box-shadow: inset 0 0 6px rgba(255,255,255,0.7); }
-        .puck.red  { background: radial-gradient(circle at 30% 30%, #ffb3b3 0%, #ff5a5a 50%, #ff2d2d 100%);
-            box-shadow: 0 0 14px #ff7a7a, 0 0 28px #ff4040; }
-        .puck.blue { background: radial-gradient(circle at 30% 30%, #b3f0ff 0%, #59d0ff 50%, #25b9cf 100%);
-            box-shadow: 0 0 14px #7fe9ff, 0 0 28px #25b9cf; }
-        .puck.red  { animation-delay: 0.2s, 0s; }
-        .puck.blue { animation-delay: 0s, 0.3s; }
-        @keyframes floatY  { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
-        @keyframes glowPulse {
-            0%, 100% { filter: drop-shadow(0 0 6px rgba(255,255,255,0.35)); }
-            50%      { filter: drop-shadow(0 0 12px rgba(255,255,255,0.6)); }
+        /* Hero PLAY orb (animated rings + triangle) */
+        .hero-play {
+            position: relative;
+            width: 112px; height: 112px;
+            margin: -6px auto 14px;
+            display: grid; place-items: center;
+            filter: drop-shadow(0 0 22px rgba(255, 120, 220, 0.32));
         }
+        .hero-play .ring {
+            position: absolute; inset: 0;
+            border-radius: 50%;
+            pointer-events: none;
+        }
+        .hero-play .ring.outer {
+            border: 1.5px dashed rgba(102, 225, 255, 0.75);
+            animation: ringSpin 9s linear infinite;
+        }
+        .hero-play .ring.mid {
+            inset: 10px;
+            border: 1.5px solid rgba(255, 120, 220, 0.55);
+            border-top-color: transparent;
+            border-left-color: transparent;
+            animation: ringSpin 5s linear infinite reverse;
+        }
+        .hero-play .ring.inner {
+            inset: 22px;
+            background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.1), rgba(102, 225, 255, 0.20) 55%, rgba(12, 18, 40, 0.85) 100%);
+            border: 1px solid rgba(255,255,255,0.14);
+            box-shadow: inset 0 0 24px rgba(0, 200, 255, 0.25), 0 0 20px rgba(255, 100, 220, 0.25);
+            animation: orbPulse 2.6s ease-in-out infinite;
+        }
+        .hero-play .play-tri {
+            position: relative; z-index: 2;
+            width: 0; height: 0;
+            border-top: 12px solid transparent;
+            border-bottom: 12px solid transparent;
+            border-left: 18px solid #ffffff;
+            margin-left: 4px;
+            filter: drop-shadow(0 0 6px rgba(255,255,255,0.7));
+            animation: triFlicker 3s ease-in-out infinite;
+        }
+        .hero-play .scan {
+            position: absolute; inset: 22px;
+            border-radius: 50%;
+            background: conic-gradient(from 0deg, rgba(102,225,255,0) 0deg, rgba(102,225,255,0.55) 40deg, rgba(102,225,255,0) 60deg);
+            mask: radial-gradient(circle, transparent 55%, black 56%, black 100%);
+            -webkit-mask: radial-gradient(circle, transparent 55%, black 56%, black 100%);
+            animation: ringSpin 2.8s linear infinite;
+        }
+        @keyframes ringSpin  { to { transform: rotate(360deg); } }
+        @keyframes orbPulse  {
+            0%, 100% { box-shadow: inset 0 0 18px rgba(0, 200, 255, 0.25), 0 0 16px rgba(255, 100, 220, 0.18); }
+            50%      { box-shadow: inset 0 0 28px rgba(0, 230, 255, 0.45), 0 0 28px rgba(255, 120, 220, 0.45); }
+        }
+        @keyframes triFlicker {
+            0%, 100% { transform: translateX(0) scale(1); opacity: 1; }
+            50%      { transform: translateX(1px) scale(1.05); opacity: 0.9; }
+        }
+
+        /* Tech pills under the hero */
+        .tech-pills {
+            display: flex; gap: 6px; flex-wrap: wrap;
+            justify-content: center;
+            margin: -4px 0 16px;
+        }
+        .tech-pill {
+            padding: 4px 10px; border-radius: 999px;
+            font: 700 9px 'JetBrains Mono', monospace;
+            letter-spacing: 1.2px; text-transform: uppercase;
+            border: 1px solid rgba(102, 225, 255, 0.28);
+            background: rgba(8, 14, 32, 0.6);
+            color: #9be4ff;
+        }
+        .tech-pill.magenta { border-color: rgba(255, 120, 220, 0.35); color: #ffb3e0; }
+        .tech-pill.green   { border-color: rgba(127, 255, 168, 0.32); color: #b8ffd0; }
 
         /* Buttons - primary (cyan) and ghost */
         .start-actions { display: flex; flex-direction: column; gap: 10px; margin-top: 4px; }
@@ -606,9 +664,12 @@
 
         <!-- Centered card -->
         <div class="menu-wrap">
-            <div class="hero-icons" aria-hidden="true">
-                <span class="puck red"></span>
-                <span class="puck blue"></span>
+            <div class="hero-play" aria-hidden="true">
+                <div class="ring outer"></div>
+                <div class="ring mid"></div>
+                <div class="ring inner"></div>
+                <div class="scan"></div>
+                <div class="play-tri"></div>
             </div>
 
             <div class="neon-title">
@@ -619,6 +680,12 @@
                     On-chain arcade. AI validators judge every level.
                     <br/>Earn <em>on-chain XP</em> via Optimistic Democracy.
                 </div>
+            </div>
+
+            <div class="tech-pills" aria-hidden="true">
+                <span class="tech-pill">Intelligent Contract</span>
+                <span class="tech-pill magenta">LLM Judge</span>
+                <span class="tech-pill green">On-chain XP</span>
             </div>
 
             <div class="stats-grid">
