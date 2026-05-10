@@ -59,13 +59,21 @@ const GENCLASH_CONTRACT = '0x0000000000000000000000000000000000000000';
 
 with the real deployed address.
 
+### Gameplay flow
+
+1. **Connect wallet** → auto-install GenLayer Snap, switch to Bradbury.
+2. **Start Match** → `pay_to_play` (0.0001 GEN) unlocks your current level.
+3. **Play a level** → on win, `report_win` advances you; on loss, `report_loss` resets you to Level 1.
+4. **Next Level** → another `pay_to_play` (0.0001 GEN) then play.
+5. **Leaderboard** → on-chain ranking by highest level reached.
+
 ### Live deployment
 
 | Field | Value |
 |---|---|
-| Contract address | `0x65FFA1b9FA030678D6f467e8B8D311c642BeecB5` |
+| Contract address | _redeploy required after schema update (see below)_ |
 | Network | GenLayer Bradbury (chain ID `4221`) |
-| Explorer | <https://explorer-bradbury.genlayer.com/address/0x65FFA1b9FA030678D6f467e8B8D311c642BeecB5> |
+| Entry fee | `0.0001 GEN` per level |
 
 ## Running locally
 

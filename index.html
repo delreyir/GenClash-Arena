@@ -316,6 +316,99 @@
             direction: ltr; unicode-bidi: isolate;
         }
 
+        /* Leaderboard */
+        .lb-panel {
+            width: min(480px, 94vw);
+            max-height: 80vh;
+            display: flex; flex-direction: column;
+            padding: 22px 22px 16px;
+            border-radius: 16px;
+            background: linear-gradient(180deg, rgba(10, 16, 36, 0.92) 0%, rgba(6, 10, 26, 0.96) 100%);
+            border: 1px solid rgba(255, 125, 215, 0.35);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6), 0 0 40px rgba(255, 100, 220, 0.18);
+            font-family: 'Inter', system-ui, sans-serif;
+        }
+        .lb-header {
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .lb-title {
+            color: #fff; font: 900 22px 'Inter', system-ui, sans-serif;
+            letter-spacing: 2px; text-transform: uppercase;
+            background: linear-gradient(90deg, #66e1ff, #ff6bd6);
+            -webkit-background-clip: text; background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .lb-close {
+            width: 28px; height: 28px; border-radius: 8px;
+            background: transparent; border: 1px solid rgba(255,255,255,0.18);
+            color: #cfeaff; font: 700 18px sans-serif; cursor: pointer; line-height: 1;
+        }
+        .lb-close:hover { border-color: rgba(255, 125, 215, 0.55); color: #ff7bd0; }
+        .lb-subtitle {
+            margin-top: 6px;
+            color: #7fa5c4; font: 500 11px 'JetBrains Mono', monospace;
+            letter-spacing: 0.5px;
+        }
+        .lb-list {
+            margin-top: 14px; overflow-y: auto;
+            display: flex; flex-direction: column; gap: 6px;
+            padding-right: 4px;
+        }
+        .lb-row {
+            display: grid; grid-template-columns: 32px 1fr 70px 70px; gap: 10px;
+            align-items: center;
+            padding: 10px 12px;
+            border-radius: 8px;
+            background: rgba(0, 200, 255, 0.04);
+            border: 1px solid rgba(0, 220, 255, 0.12);
+        }
+        .lb-row.me { background: rgba(255, 125, 215, 0.10); border-color: rgba(255, 125, 215, 0.45); }
+        .lb-row.gold { background: rgba(255, 215, 100, 0.06); border-color: rgba(255, 215, 100, 0.35); }
+        .lb-rank {
+            color: #66e1ff; font: 900 14px 'JetBrains Mono', monospace;
+            text-align: center; letter-spacing: 1px;
+        }
+        .lb-row.gold .lb-rank { color: #ffd77a; }
+        .lb-addr {
+            color: #eaf6ff; font: 700 12px 'JetBrains Mono', monospace;
+            overflow: hidden; text-overflow: ellipsis;
+        }
+        .lb-lvl, .lb-xp {
+            font: 800 14px 'Inter', sans-serif;
+            text-align: right;
+        }
+        .lb-lvl { color: #ff7bd0; }
+        .lb-xp  { color: #7fffa8; }
+        .lb-header-row {
+            display: grid; grid-template-columns: 32px 1fr 70px 70px; gap: 10px;
+            padding: 0 12px 4px;
+            color: #5d8aab; font: 700 9px 'JetBrains Mono', monospace;
+            letter-spacing: 1.5px; text-transform: uppercase;
+            border-bottom: 1px solid rgba(0, 220, 255, 0.08);
+            margin-bottom: 4px;
+        }
+        .lb-header-row .lvl, .lb-header-row .xp { text-align: right; }
+        .lb-empty {
+            padding: 40px 20px; text-align: center;
+            color: #7fa5c4; font: 600 12px 'JetBrains Mono', monospace;
+        }
+        .lb-footer {
+            margin-top: 12px; padding-top: 12px;
+            border-top: 1px solid rgba(0, 220, 255, 0.10);
+            display: flex; justify-content: space-between; align-items: center;
+            color: #5d8aab; font: 600 10px 'JetBrains Mono', monospace;
+            letter-spacing: 1px;
+        }
+        .lb-refresh {
+            padding: 6px 14px; border-radius: 6px;
+            background: rgba(0, 220, 255, 0.10);
+            border: 1px solid rgba(0, 220, 255, 0.35);
+            color: #66e1ff; font: 700 10px 'JetBrains Mono', monospace;
+            letter-spacing: 1px; text-transform: uppercase; cursor: pointer;
+        }
+        .lb-refresh:hover { background: rgba(0, 220, 255, 0.18); }
+        .lb-refresh[disabled] { opacity: 0.5; cursor: wait; }
+
         /* Faucet CTA */
         .faucet-link {
             margin-top: 12px;
@@ -534,18 +627,19 @@
                     <div class="stat-value cyan">Bradbury</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-label">Entry</div>
-                    <div class="stat-value" style="color:#7fffa8;">Free</div>
+                    <div class="stat-label">Per Level</div>
+                    <div class="stat-value">0.0001 GEN</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-label">Mode</div>
-                    <div class="stat-value">Solo · AI</div>
+                    <div class="stat-label">Your Level</div>
+                    <div class="stat-value" id="statLevel" style="color:#ff7bd0;">—</div>
                 </div>
             </div>
 
             <div class="start-actions">
                 <button class="menu-btn" id="btnConnect">Connect Wallet</button>
                 <button class="menu-btn primary" id="btnStart">Start Match</button>
+                <button class="menu-btn" id="btnLeaderboard" style="font-size:11px; letter-spacing:2px;">View Leaderboard</button>
             </div>
 
             <div class="wallet-status">
@@ -561,6 +655,24 @@
             <div class="menu-footer">
                 <span class="left">/// AI Consensus</span>
                 <span class="right">v0.1 · Testnet</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Leaderboard Overlay -->
+    <div class="result-overlay" id="leaderboardOverlay" style="display:none; z-index:50;">
+        <div class="lb-panel">
+            <div class="lb-header">
+                <div class="lb-title">Leaderboard</div>
+                <button class="lb-close" id="btnCloseLeaderboard" aria-label="Close">×</button>
+            </div>
+            <div class="lb-subtitle">Top players by highest level reached · On-chain (Bradbury)</div>
+            <div class="lb-list" id="lbList">
+                <div class="lb-empty">Loading…</div>
+            </div>
+            <div class="lb-footer">
+                <span id="lbStats">—</span>
+                <button class="lb-refresh" id="btnRefreshLeaderboard">Refresh</button>
             </div>
         </div>
     </div>
@@ -653,7 +765,7 @@
       // ---- Configuration ------------------------------------------------
       // Deployed GenClashArena Intelligent Contract on GenLayer Bradbury.
       const GENCLASH_CONTRACT = '0x65FFA1b9FA030678D6f467e8B8D311c642BeecB5';
-      const ENTRY_FEE_WEI      = 10n ** 15n;          // 0.001 GEN
+      const ENTRY_FEE_WEI      = 10n ** 14n;          // 0.0001 GEN (per level)
       const GENLAYER_CHAIN_HEX = '0x107d';            // 4221
       const GENLAYER_CHAIN_PARAMS = {
         chainId: GENLAYER_CHAIN_HEX,
@@ -732,8 +844,10 @@
           await ensureGenLayerChain(provider);
           await buildClient();
           if (walletAddrEl) walletAddrEl.textContent = userAddress.slice(0,6)+'...'+userAddress.slice(-4);
-          setStatus('✅ Connected to GenLayer Bradbury');
+          setStatus('Connected to GenLayer Bradbury');
           if (btnStart) btnStart.disabled = false;
+          // Kick off an async level-stat refresh (no await - let it render in bg).
+          try { window.GenClashChain?.refreshPlayerLevel?.(); } catch(_){}
         }catch(e){
           console.warn('Connect error:', e);
           setStatus(`❌ ${e.message?.split('\n')[0] || 'Connection failed'}`);
@@ -743,12 +857,13 @@
         }
       }
 
-      // ---- Pay entry fee (reusable for Start + Restart) ----------------
+      function contractReady(){
+        return !!(userAddress && glClient && GENCLASH_CONTRACT && !/^0x0{40}$/i.test(GENCLASH_CONTRACT));
+      }
+
+      // ---- Pay entry fee for the current level -------------------------
       async function payToPlay(){
-        if (!userAddress || !glClient) throw new Error('Wallet not connected');
-        if (!GENCLASH_CONTRACT || /^0x0{40}$/i.test(GENCLASH_CONTRACT)){
-          throw new Error('Contract address not configured (GENCLASH_CONTRACT).');
-        }
+        if (!contractReady()) throw new Error('Wallet not connected or contract missing.');
         const txHash = await glClient.writeContract({
           address: GENCLASH_CONTRACT,
           functionName: 'pay_to_play',
@@ -758,76 +873,236 @@
         clog('pay_to_play tx:', txHash);
         matchStartTs = Date.now();
         glClient.waitForTransactionReceipt({ hash: txHash, status: TransactionStatus.ACCEPTED })
-          .then(()=> setStatus('Entry fee accepted by validators.'))
+          .then(()=> setStatus('Entry fee accepted. Level unlocked.'))
           .catch(()=>{});
         return txHash;
       }
 
+      // ---- Report a level win ------------------------------------------
+      async function reportWin(){
+        if (!contractReady()) return null;
+        try{
+          setStatus('Submitting level win on-chain...');
+          const txHash = await glClient.writeContract({
+            address: GENCLASH_CONTRACT,
+            functionName: 'report_win',
+            args: [],
+          });
+          clog('report_win tx:', txHash);
+          glClient.waitForTransactionReceipt({ hash: txHash, status: TransactionStatus.ACCEPTED })
+            .then(()=> setStatus('Level win recorded. Keep going!'))
+            .catch(()=>{});
+          return txHash;
+        }catch(e){
+          console.error('report_win error:', e);
+          setStatus('Could not record win on-chain.');
+          return null;
+        }
+      }
+
+      // ---- Report a level loss -----------------------------------------
+      async function reportLoss(){
+        if (!contractReady()) return null;
+        try{
+          setStatus('Submitting level loss on-chain...');
+          const txHash = await glClient.writeContract({
+            address: GENCLASH_CONTRACT,
+            functionName: 'report_loss',
+            args: [],
+          });
+          clog('report_loss tx:', txHash);
+          glClient.waitForTransactionReceipt({ hash: txHash, status: TransactionStatus.ACCEPTED })
+            .then(()=> setStatus('Loss recorded. Back to Level 1.'))
+            .catch(()=>{});
+          return txHash;
+        }catch(e){
+          console.error('report_loss error:', e);
+          setStatus('Could not record loss on-chain.');
+          return null;
+        }
+      }
+
+      // ---- Reads --------------------------------------------------------
+      async function fetchCurrentLevel(){
+        if (!contractReady()) return 1;
+        try{
+          const lvl = await glClient.readContract({
+            address: GENCLASH_CONTRACT,
+            functionName: 'get_current_level',
+            args: [userAddress],
+          });
+          const n = Number(lvl) || 0;
+          return n > 0 ? n : 1;
+        }catch(_){ return 1; }
+      }
+
+      async function fetchHighestLevel(addr){
+        if (!contractReady()) return 0;
+        try{
+          const lvl = await glClient.readContract({
+            address: GENCLASH_CONTRACT,
+            functionName: 'get_highest_level',
+            args: [addr || userAddress],
+          });
+          return Number(lvl) || 0;
+        }catch(_){ return 0; }
+      }
+
+      async function fetchLeaderboard(){
+        if (!contractReady()) return [];
+        try{
+          const rows = await glClient.readContract({
+            address: GENCLASH_CONTRACT,
+            functionName: 'get_leaderboard',
+            args: [],
+          });
+          const parsed = (Array.isArray(rows) ? rows : []).map(r => ({
+            address: String(r[0] || r.address || ''),
+            highestLevel: Number(r[1] ?? r.highestLevel ?? 0),
+            xp: Number(r[2] ?? r.xp ?? 0),
+          }));
+          parsed.sort((a, b) => (b.highestLevel - a.highestLevel) || (b.xp - a.xp));
+          return parsed;
+        }catch(e){
+          console.error('fetchLeaderboard error:', e);
+          return [];
+        }
+      }
+
+      // ---- Start match: pay, then sync level from contract -------------
       async function handleStart(ev){
         if (ev){ ev.preventDefault(); ev.stopImmediatePropagation(); }
-        if (!userAddress || !glClient){
+        if (!contractReady()){
           setStatus('Connect your wallet first.');
           return;
         }
-        // Free to play. No entry fee, no blockchain roundtrip at start.
-        // Each completed level submits a lightweight record_result tx.
-        matchStartTs = Date.now();
-        setStatus('Match started. Results are judged by AI validators per level.');
-        try{ window.startGameDirect?.(); }catch(_){}
-        const sm = document.getElementById('startMenu');
-        if (sm) sm.style.display = 'none';
-      }
-
-      // ---- Submit match result for AI-judged XP ------------------------
-      // Called by the existing game code from the win/lose handlers.
-      async function recordResult({ playerScore, aiScore, level, summary }){
-        if (!glClient || !userAddress) return;
-        if (/^0x0{40}$/i.test(GENCLASH_CONTRACT)) return;
-        const duration = Math.max(0, Math.round((Date.now() - matchStartTs) / 1000));
+        if (btnStart){ btnStart.disabled = true; btnStart.textContent = 'PAYING...'; }
+        setStatus('Approve 0.0001 GEN entry fee to unlock your level...');
         try{
-          setStatus('Submitting result for AI consensus...');
-          const txHash = await glClient.writeContract({
-            address: GENCLASH_CONTRACT,
-            functionName: 'record_result',
-            args: [
-              Number(playerScore) || 0,
-              Number(aiScore)     || 0,
-              Number(level)       || 1,
-              duration,
-              String(summary || '').slice(0, 500),
-            ],
-          });
-          clog('record_result tx:', txHash);
-          setStatus('Match submitted. Waiting for validator consensus...');
-          glClient.waitForTransactionReceipt({ hash: txHash, status: TransactionStatus.ACCEPTED })
-            .then(async ()=>{
-              try{
-                const xp = await glClient.readContract({
-                  address: GENCLASH_CONTRACT,
-                  functionName: 'get_xp',
-                  args: [userAddress],
-                });
-                setStatus(`✅ Validators awarded XP. Total XP: ${xp}`);
-              }catch(_){ setStatus('✅ Match accepted by validators.'); }
-            })
-            .catch(()=> setStatus('⚠️ Result not accepted yet.'));
+          await payToPlay();
+          const lvl = await fetchCurrentLevel();
+          // Sync local game level with on-chain progression.
+          if (typeof window.setLocalLevel === 'function') window.setLocalLevel(lvl);
+          setStatus(`Starting Level ${lvl}. Win to advance, lose to reset.`);
+          try{ window.startGameDirect?.(); }catch(_){}
+          const sm = document.getElementById('startMenu');
+          if (sm) sm.style.display = 'none';
         }catch(e){
-          console.error('record_result error:', e);
-          setStatus('❌ Could not submit result on-chain.');
+          console.error('Start error:', e);
+          setStatus(e?.message?.includes('configured')
+            ? 'Contract address not set in index.html.'
+            : 'Payment failed or rejected.');
+        }finally{
+          if (btnStart){ btnStart.textContent = 'START MATCH'; btnStart.disabled = false; }
         }
       }
 
-      // Expose a small global API for the existing game script.
+      // Expose API for the game script.
       window.GenClashChain = {
         get connected(){ return !!userAddress; },
         get address(){ return userAddress; },
         payToPlay,
-        recordResult,
+        reportWin,
+        reportLoss,
+        fetchCurrentLevel,
+        fetchHighestLevel,
+        fetchLeaderboard,
         setStatus,
       };
 
       if (btnConnect) btnConnect.addEventListener('click', handleConnect, { capture: true });
       if (btnStart)   btnStart.addEventListener('click',   handleStart,   { capture: true });
+
+      // ---- Leaderboard overlay wiring --------------------------------
+      const btnLeaderboard       = document.getElementById('btnLeaderboard');
+      const btnCloseLeaderboard  = document.getElementById('btnCloseLeaderboard');
+      const btnRefreshLeaderboard= document.getElementById('btnRefreshLeaderboard');
+      const leaderboardOverlay   = document.getElementById('leaderboardOverlay');
+      const lbListEl             = document.getElementById('lbList');
+      const lbStatsEl            = document.getElementById('lbStats');
+      const statLevelEl          = document.getElementById('statLevel');
+
+      function shortAddr(a){ return a ? (a.slice(0,6) + '…' + a.slice(-4)) : ''; }
+
+      async function renderLeaderboard(){
+        if (!lbListEl) return;
+        if (!contractReady()){
+          lbListEl.innerHTML = '<div class="lb-empty">Connect your wallet to load the on-chain leaderboard.</div>';
+          return;
+        }
+        lbListEl.innerHTML = '<div class="lb-empty">Fetching players from Bradbury…</div>';
+        if (btnRefreshLeaderboard) btnRefreshLeaderboard.disabled = true;
+        try{
+          const rows = await fetchLeaderboard();
+          if (!rows.length){
+            lbListEl.innerHTML = '<div class="lb-empty">No players yet. Be the first to set a score.</div>';
+            if (lbStatsEl) lbStatsEl.textContent = '0 players';
+            return;
+          }
+          const top = rows.slice(0, 25);
+          const me = (userAddress || '').toLowerCase();
+          const html = [
+            '<div class="lb-header-row"><span>#</span><span>Address</span><span class="lvl">Level</span><span class="xp">XP</span></div>'
+          ];
+          top.forEach((r, i) => {
+            const isMe = r.address && r.address.toLowerCase() === me;
+            const isGold = i === 0;
+            const cls = ['lb-row', isMe ? 'me' : '', isGold ? 'gold' : ''].filter(Boolean).join(' ');
+            html.push(
+              `<div class="${cls}">
+                <div class="lb-rank">${i + 1}</div>
+                <div class="lb-addr" title="${r.address}">${shortAddr(r.address)}${isMe ? ' · you' : ''}</div>
+                <div class="lb-lvl">L${r.highestLevel}</div>
+                <div class="lb-xp">${r.xp}</div>
+              </div>`
+            );
+          });
+          lbListEl.innerHTML = html.join('');
+          if (lbStatsEl) lbStatsEl.textContent = `${rows.length} player${rows.length === 1 ? '' : 's'}`;
+        }catch(e){
+          console.error(e);
+          lbListEl.innerHTML = '<div class="lb-empty">Failed to load leaderboard. Try again.</div>';
+        }finally{
+          if (btnRefreshLeaderboard) btnRefreshLeaderboard.disabled = false;
+        }
+      }
+
+      function openLeaderboard(){
+        if (leaderboardOverlay) leaderboardOverlay.style.display = 'grid';
+        renderLeaderboard();
+      }
+      function closeLeaderboard(){
+        if (leaderboardOverlay) leaderboardOverlay.style.display = 'none';
+      }
+
+      if (btnLeaderboard)        btnLeaderboard.addEventListener('click', openLeaderboard);
+      if (btnCloseLeaderboard)   btnCloseLeaderboard.addEventListener('click', closeLeaderboard);
+      if (btnRefreshLeaderboard) btnRefreshLeaderboard.addEventListener('click', renderLeaderboard);
+      if (leaderboardOverlay){
+        leaderboardOverlay.addEventListener('click', (e)=>{
+          if (e.target === leaderboardOverlay) closeLeaderboard();
+        });
+      }
+
+      // Keep the "Your Level" stat fresh: after connect and after txs.
+      async function refreshPlayerLevel(){
+        if (!contractReady()) { if (statLevelEl) statLevelEl.textContent = '—'; return; }
+        try{
+          const [cur, high] = await Promise.all([
+            fetchCurrentLevel(),
+            fetchHighestLevel(),
+          ]);
+          if (statLevelEl) statLevelEl.textContent = `L${cur} · max L${high}`;
+        }catch(_){}
+      }
+      window.GenClashChain.refreshPlayerLevel = refreshPlayerLevel;
+
+      // Auto-refresh the stat after connect and every ~12s while menu is open.
+      const origHandleConnect = handleConnect;
+      setInterval(()=>{
+        const menu = document.getElementById('startMenu');
+        if (menu && menu.style.display !== 'none' && contractReady()) refreshPlayerLevel();
+      }, 12000);
     </script>
 
     <script>
@@ -2176,18 +2451,10 @@ const PADDLE_RADIUS = Math.round(38 * SCALE); // enlarged player & AI paddles
 
                 // Check l'rb7
                 if (playerScore >= WINNING_SCORE) {
-                    // Rb7: وقف اللعب وبيّن Overlay ديال الفوز
+                    // Win: record on-chain (advances current_level + awards XP).
                     playSound('win');
                     if (winScoreEl) winScoreEl.textContent = `${playerScore}:${aiScore}`;
-                    // Submit result on-chain for AI-judged XP (GenLayer).
-                    try {
-                        window.GenClashChain?.recordResult?.({
-                            playerScore, aiScore,
-                            level: currentLevel,
-                            summary: `Win at level ${currentLevel}`,
-                        });
-                    } catch(_) {}
-                    // If final level reached, show congratulations overlay instead
+                    try { window.GenClashChain?.reportWin?.(); } catch(_) {}
                     if (currentLevel >= TOTAL_LEVELS){
                         const congrats = document.getElementById('congratsOverlay');
                         if (congrats) congrats.style.display = 'grid';
@@ -2195,23 +2462,16 @@ const PADDLE_RADIUS = Math.round(38 * SCALE); // enlarged player & AI paddles
                         if (winOverlay) winOverlay.style.display = 'grid';
                     }
                     isPaused = true;
-                    return; // نستناو ضغط "NEXT LEVEL" أو "PLAY AGAIN" ف الأخير
+                    return;
                 } else if (aiScore >= WINNING_SCORE) {
-                    // Khsert: وقف اللعب وبيّn Overlay
+                    // Loss: record on-chain (resets current_level to 1).
                     playSound('lose');
                     if (loseScoreEl) loseScoreEl.textContent = `${playerScore}:${aiScore}`;
-                    // Submit result on-chain for AI-judged XP (GenLayer).
-                    try {
-                        window.GenClashChain?.recordResult?.({
-                            playerScore, aiScore,
-                            level: currentLevel,
-                            summary: `Loss at level ${currentLevel}`,
-                        });
-                    } catch(_) {}
+                    try { window.GenClashChain?.reportLoss?.(); } catch(_) {}
                     currentLevel = 1;
                     if (loseOverlay) loseOverlay.style.display = 'grid';
                     isPaused = true;
-                    return; // مانكمّلوش الريسيت حتى يضغط اللاعب
+                    return;
                 }
 
                 if (roundOver) {
@@ -2388,6 +2648,14 @@ const PADDLE_RADIUS = Math.round(38 * SCALE); // enlarged player & AI paddles
             // Exposed for the GenLayer module to call after a successful pay_to_play tx.
             window.startGameDirect = startGameDirect;
 
+            // Allow the GenLayer module to sync the local level from the contract.
+            window.setLocalLevel = function(n){
+                const clamped = Math.max(1, Math.min(TOTAL_LEVELS, Number(n) || 1));
+                currentLevel = clamped;
+                maxUnlockedLevel = Math.max(maxUnlockedLevel, clamped);
+                try { updateSideHUD?.(); } catch(_){}
+            };
+
             // Restart from Lose overlay: re-pay 0.001 GEN, then reset the match.
             function restartAfterLose() {
                 if (loseOverlay) loseOverlay.style.display = 'none';
@@ -2398,13 +2666,30 @@ const PADDLE_RADIUS = Math.round(38 * SCALE); // enlarged player & AI paddles
                 updatePauseUI();
             }
             const btnRestart = document.getElementById('btnRestart');
-            function restartFreeFlow(event){
+            async function restartWithPayment(event){
                 if (event){ event.preventDefault(); event.stopImmediatePropagation(); }
-                restartAfterLose();
+                const chain = window.GenClashChain;
+                if (!chain || !chain.connected){
+                    if (loseSubEl) loseSubEl.textContent = 'Connect wallet to restart.';
+                    return;
+                }
+                if (btnRestart){ btnRestart.disabled = true; btnRestart.textContent = 'PAYING...'; }
+                try{
+                    chain.setStatus?.('Approve 0.0001 GEN to retry Level 1...');
+                    await chain.payToPlay();
+                    const lvl = await chain.fetchCurrentLevel();
+                    window.setLocalLevel?.(lvl);
+                    restartAfterLose();
+                }catch(e){
+                    console.error('Restart payment error:', e);
+                    if (loseSubEl) loseSubEl.textContent = 'Payment rejected. Try again.';
+                }finally{
+                    if (btnRestart){ btnRestart.textContent = 'RESTART'; btnRestart.disabled = false; }
+                }
             }
             if (btnRestart){
-                btnRestart.addEventListener('click', restartFreeFlow, { capture: true });
-                btnRestart.addEventListener('touchstart', (e)=>{ e.preventDefault(); restartFreeFlow(e); }, { capture: true });
+                btnRestart.addEventListener('click', restartWithPayment, { capture: true });
+                btnRestart.addEventListener('touchstart', (e)=>{ e.preventDefault(); restartWithPayment(e); }, { capture: true });
             }
 
             // [JDID] Proceed to next level on win
@@ -2441,7 +2726,28 @@ const PADDLE_RADIUS = Math.round(38 * SCALE); // enlarged player & AI paddles
                 btnPlayAgain10.addEventListener('click', playAgainFromStart);
                 btnPlayAgain10.addEventListener('touchstart', (e)=>{ e.preventDefault(); playAgainFromStart(); });
             }
-            if (btnNextLevel) btnNextLevel.addEventListener('click', proceedNextLevel);
+            async function nextLevelWithPayment(event){
+                if (event){ event.preventDefault(); event.stopImmediatePropagation(); }
+                const chain = window.GenClashChain;
+                if (!chain || !chain.connected){
+                    proceedNextLevel();
+                    return;
+                }
+                if (btnNextLevel){ btnNextLevel.disabled = true; btnNextLevel.textContent = 'PAYING...'; }
+                try{
+                    chain.setStatus?.('Approve 0.0001 GEN to unlock the next level...');
+                    await chain.payToPlay();
+                    const lvl = await chain.fetchCurrentLevel();
+                    window.setLocalLevel?.(lvl);
+                    proceedNextLevel();
+                }catch(e){
+                    console.error('Next-level payment error:', e);
+                    chain.setStatus?.('Payment rejected. Try again.');
+                }finally{
+                    if (btnNextLevel){ btnNextLevel.textContent = 'NEXT LEVEL'; btnNextLevel.disabled = false; }
+                }
+            }
+            if (btnNextLevel) btnNextLevel.addEventListener('click', nextLevelWithPayment);
 
             // DEV button wiring
             if (DEV_MODE && btnDev){ btnDev.style.display = 'inline-block'; btnDev.addEventListener('click', showLevelsOverlay); }
