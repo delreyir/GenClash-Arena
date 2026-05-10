@@ -79,130 +79,260 @@
             display: none; /* <<< [JDIID] 7eydna l'score mn jnb */
         }
 
-        /* --- [JDID] Start Overlay (Menu) --- */
+        /* =============================================================
+           START MENU - Cyber HUD redesign (GenLayer x Neon Hockey)
+           ============================================================= */
         .start-overlay {
             position: fixed;
             inset: 0;
             display: grid;
-            place-items: start center; /* push content up and keep horizontally centered */
-            padding-top: 28px; /* slight offset from very top */
-            background: transparent; /* Show the game table or bg image */
+            place-items: center;
+            padding: 20px;
             z-index: 30;
+            font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+            direction: ltr;
         }
-        /* Background image behind the start content */
+        /* Layered background: deep navy + animated grid + radial accents */
         .start-overlay::before {
             content: "";
             position: absolute; inset: 0;
-            /* Fallback gradient + tswira ila كانت start-bg.png */
             background:
-                radial-gradient(120% 80% at 50% 20%, rgba(20,30,50,0.95), rgba(5,10,20,0.95)),
-                url('start-bg.png') center / cover no-repeat;
-            opacity: 0.7; /* شفافية باش يبان النص والزرار مزيان */
-            filter: blur(1px) saturate(1.05) brightness(1.06);
+                radial-gradient(60% 50% at 20% 0%,  rgba(0, 200, 255, 0.18), transparent 70%),
+                radial-gradient(60% 50% at 80% 100%, rgba(255, 0, 200, 0.14), transparent 70%),
+                linear-gradient(180deg, #04071a 0%, #060a23 50%, #04071a 100%);
             pointer-events: none;
         }
-        .menu-wrap { position: relative; z-index: 1; }
-        .menu-wrap {
-            display: flex; flex-direction: column; align-items: center; gap: 18px;
+        .start-overlay::after {
+            content: "";
+            position: absolute; inset: 0;
+            background-image:
+                linear-gradient(rgba(0, 220, 255, 0.06) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 220, 255, 0.06) 1px, transparent 1px);
+            background-size: 40px 40px;
+            mask-image: radial-gradient(ellipse at center, black 40%, transparent 80%);
+            -webkit-mask-image: radial-gradient(ellipse at center, black 40%, transparent 80%);
+            animation: gridDrift 18s linear infinite;
+            pointer-events: none;
         }
+        @keyframes gridDrift {
+            0%   { background-position: 0 0, 0 0; }
+            100% { background-position: 40px 40px, 40px 40px; }
+        }
+
+        /* Top bar: brand mark + GenLayer badge */
+        .top-bar {
+            position: fixed; top: 14px; left: 14px; right: 14px;
+            display: flex; justify-content: space-between; align-items: center;
+            z-index: 32; pointer-events: none;
+        }
+        .brand-mark {
+            display: flex; align-items: center; gap: 8px;
+            color: #cfeaff; font: 700 11px 'JetBrains Mono', 'Consolas', monospace;
+            letter-spacing: 2px; text-transform: uppercase;
+        }
+        .brand-mark .dot {
+            width: 8px; height: 8px; border-radius: 50%;
+            background: #00e5ff;
+            box-shadow: 0 0 8px #00e5ff, 0 0 16px #00e5ff;
+            animation: pulseDot 1.6s ease-in-out infinite;
+        }
+        @keyframes pulseDot {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50%      { opacity: 0.55; transform: scale(0.85); }
+        }
+        .gl-badge {
+            padding: 6px 12px; border-radius: 999px;
+            border: 1px solid rgba(0, 220, 255, 0.35);
+            background: rgba(8, 14, 32, 0.55);
+            backdrop-filter: blur(6px);
+            color: #9be4ff; font: 700 10px 'JetBrains Mono', monospace;
+            letter-spacing: 1.5px; text-transform: uppercase;
+        }
+        .gl-badge b { color: #fff; }
+
+        /* Centered card */
+        .menu-wrap {
+            position: relative; z-index: 1;
+            display: flex; flex-direction: column; align-items: stretch;
+            width: min(420px, 92vw);
+            padding: 28px 26px 22px;
+            border-radius: 18px;
+            background: linear-gradient(180deg, rgba(10, 16, 36, 0.78) 0%, rgba(6, 10, 26, 0.90) 100%);
+            border: 1px solid rgba(0, 220, 255, 0.22);
+            box-shadow:
+                0 0 0 1px rgba(255, 255, 255, 0.02) inset,
+                0 20px 60px rgba(0, 0, 0, 0.55),
+                0 0 60px rgba(0, 200, 255, 0.10);
+        }
+        .menu-wrap::before {
+            content: "";
+            position: absolute; inset: -1px;
+            border-radius: 18px;
+            padding: 1px;
+            background: linear-gradient(135deg, rgba(0, 230, 255, 0.55), transparent 35%, transparent 65%, rgba(255, 60, 200, 0.45));
+            -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+                    mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+            -webkit-mask-composite: xor;
+                    mask-composite: exclude;
+            pointer-events: none;
+        }
+
+        /* Title block */
         .neon-title {
-            position: relative;
-            display: flex; flex-direction: column; align-items: center; gap: 4px;
-            margin-bottom: 10px;
+            display: flex; flex-direction: column; align-items: center; gap: 2px;
+            margin-bottom: 6px;
+        }
+        .title-eyebrow {
+            color: #5aa9d8; font: 700 10px 'JetBrains Mono', monospace;
+            letter-spacing: 4px; text-transform: uppercase;
+            margin-bottom: 6px;
         }
         .neon-word {
             color: #ffffff;
-            font: 900 78px Arial, sans-serif;
-            font-style: italic;
-            letter-spacing: 2px;
-            text-transform: uppercase;
-            -webkit-text-stroke: 3.5px rgba(0, 210, 255, 0.65);
-            text-shadow:
-                0 0 8px rgba(102, 204, 255, 0.95),
-                0 0 18px rgba(102, 204, 255, 0.80),
-                0 0 36px rgba(0, 190, 255, 0.70),
-                0 0 54px rgba(0, 170, 255, 0.55);
+            font: 900 44px 'Inter', system-ui, sans-serif;
+            letter-spacing: 4px;
+            line-height: 1;
+            background: linear-gradient(90deg, #66e1ff 0%, #ffffff 50%, #ff6bd6 100%);
+            -webkit-background-clip: text;
+                    background-clip: text;
+            -webkit-text-fill-color: transparent;
             filter: drop-shadow(0 0 18px rgba(0, 195, 255, 0.35));
-            animation: none;
-            line-height: 0.92;
-            transform: skewX(-8deg);
         }
-        .neon-word.small { font-size: 68px; -webkit-text-stroke: 3px rgba(0, 210, 255, 0.6); }
-        /* subtle inner pink sheen */
-        .neon-title::before { display: none; content: none; }
-        /* remove moving shine bar to stay fixed */
-        .neon-title::after { display: none; }
-        /* Decorative neon puck icons */
-        .hero-icons { display: flex; gap: 14px; align-items: center; justify-content: center; margin-top: 36px; margin-bottom: 12px; }
-        @media (max-height: 700px) { .hero-icons { margin-top: 24px; } }
-        .puck { position: relative; width: 42px; height: 42px; border-radius: 50%; overflow: visible; will-change: transform, box-shadow; animation: floatY 3.4s ease-in-out infinite, glideLR 4.8s ease-in-out infinite, glowPulse 2.2s ease-in-out infinite; }
-        .puck::before { content: ""; position: absolute; inset: -4px; border-radius: 50%; box-shadow: 0 0 18px 6px rgba(255,255,255,0.25); }
-        .puck::after { content: ""; position: absolute; inset: 6px; border-radius: 50%; background: rgba(255,255,255,0.9); box-shadow: inset 0 0 10px rgba(255,255,255,0.65); }
-        .puck.red { background: radial-gradient(circle at 30% 30%, #ffb3b3 0%, #ff5a5a 50%, #ff2d2d 100%); box-shadow: 0 0 12px #ff7a7a, 0 0 26px #ff4040; }
-        .puck.red::before { box-shadow: 0 0 22px 8px rgba(255,64,64,0.55); }
-        .puck.blue { background: radial-gradient(circle at 30% 30%, #b3f0ff 0%, #59d0ff 50%, #25b9cf 100%); box-shadow: 0 0 12px #7fe9ff, 0 0 26px #25b9cf; }
-        .puck.blue::before { box-shadow: 0 0 22px 8px rgba(37,185,207,0.55); }
-        @keyframes floatY { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
-        @keyframes glideLR { 0% { transform: translateY(0) translateX(-6px); } 50% { transform: translateY(-4px) translateX(6px); } 100% { transform: translateY(0) translateX(-6px); } }
-        @keyframes glowPulse {
-            0%, 100% { filter: drop-shadow(0 0 6px rgba(255,255,255,0.35)); }
-            50% { filter: drop-shadow(0 0 10px rgba(255,255,255,0.55)); }
+        .neon-word.small {
+            font-size: 30px; letter-spacing: 8px; opacity: 0.95;
         }
-        /* staggered timing to avoid synchronous movement */
-        .puck.red { animation-delay: 0.2s, 0s, 0s; }
-        .puck.blue { animation-delay: 0s, 0.3s, 0.1s; }
-        @keyframes magPulse {
-            0%, 100% {
-                text-shadow:
-                    0 0 6px rgba(255, 105, 180, 0.85),
-                    0 0 12px rgba(255, 105, 180, 0.70),
-                    0 0 26px rgba(255, 20, 147, 0.60);
-            }
-            50% {
-                text-shadow:
-                    0 0 10px rgba(255, 120, 190, 0.95),
-                    0 0 22px rgba(255, 80, 170, 0.85),
-                    0 0 40px rgba(255, 20, 147, 0.70);
-            }
+        .title-tagline {
+            margin-top: 10px;
+            color: #94c8e6; font: 500 12px 'Inter', system-ui, sans-serif;
+            letter-spacing: 1px; text-align: center;
         }
-        @keyframes titleSweep {
-            0% { left: -20%; }
-            50% { left: 100%; }
-            100% { left: -20%; }
-        }
-        .neon-hd {
-            color: #9bd8ff;
-            font: bold 24px Arial;
-            text-shadow: 0 0 10px #66ccff, 0 0 18px #66ccff;
-        }
-        .menu-btn {
-            min-width: 260px;
-            padding: 16px 24px;
-            border-radius: 18px;
-            border: 2px solid #ffb657; /* bright orange border */
-            color: #fff; font: 800 20px Arial; letter-spacing: 1px;
-            text-transform: uppercase;
-            background: linear-gradient(180deg, rgba(255,190,120,0.22) 0%, rgba(255,150,70,0.22) 50%, rgba(255,190,120,0.22) 100%);
-            box-shadow:
-                0 0 10px rgba(255,170,80,0.75),
-                0 0 20px rgba(255,140,60,0.55),
-                inset 0 0 12px rgba(255,230,200,0.75),
-                inset 0 0 24px rgba(255,170,80,0.45);
-            cursor: pointer;
-            direction: ltr; /* Ensure punctuation appears at the end for English labels */
-            unicode-bidi: isolate;
-        }
-        .menu-btn:active { transform: scale(0.98); }
-        .menu-btn[disabled] {
-            opacity: 0.55;
-            cursor: not-allowed;
-            filter: grayscale(35%);
-            box-shadow: none;
+        .title-tagline em {
+            color: #ff7bd0; font-style: normal; font-weight: 700;
+            text-shadow: 0 0 10px rgba(255, 80, 200, 0.45);
         }
 
-        /* Position start actions lower, under the center circle of the table */
-        .start-actions { margin-top: 120px; display: flex; flex-direction: column; gap: 12px; }
-        @media (max-height: 700px) { .start-actions { margin-top: 90px; } }
+        /* Stats grid */
+        .stats-grid {
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+            margin: 18px 0 16px;
+        }
+        .stat-card {
+            padding: 10px 8px; border-radius: 10px;
+            background: rgba(0, 200, 255, 0.04);
+            border: 1px solid rgba(0, 220, 255, 0.14);
+            text-align: center;
+        }
+        .stat-label {
+            color: #5d8aab; font: 700 9px 'JetBrains Mono', monospace;
+            letter-spacing: 1.5px; text-transform: uppercase;
+        }
+        .stat-value {
+            margin-top: 4px;
+            color: #ffffff; font: 700 13px 'Inter', system-ui, sans-serif;
+        }
+        .stat-value.cyan { color: #66e1ff; text-shadow: 0 0 8px rgba(100, 220, 255, 0.45); }
+
+        /* Decorative pucks (smaller, integrated above title) */
+        .hero-icons { display: flex; gap: 16px; align-items: center; justify-content: center; margin-bottom: 14px; }
+        .puck { position: relative; width: 24px; height: 24px; border-radius: 50%;
+            animation: floatY 3.4s ease-in-out infinite, glowPulse 2.4s ease-in-out infinite; }
+        .puck::after { content: ""; position: absolute; inset: 4px; border-radius: 50%;
+            background: rgba(255,255,255,0.9); box-shadow: inset 0 0 6px rgba(255,255,255,0.7); }
+        .puck.red  { background: radial-gradient(circle at 30% 30%, #ffb3b3 0%, #ff5a5a 50%, #ff2d2d 100%);
+            box-shadow: 0 0 14px #ff7a7a, 0 0 28px #ff4040; }
+        .puck.blue { background: radial-gradient(circle at 30% 30%, #b3f0ff 0%, #59d0ff 50%, #25b9cf 100%);
+            box-shadow: 0 0 14px #7fe9ff, 0 0 28px #25b9cf; }
+        .puck.red  { animation-delay: 0.2s, 0s; }
+        .puck.blue { animation-delay: 0s, 0.3s; }
+        @keyframes floatY  { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+        @keyframes glowPulse {
+            0%, 100% { filter: drop-shadow(0 0 6px rgba(255,255,255,0.35)); }
+            50%      { filter: drop-shadow(0 0 12px rgba(255,255,255,0.6)); }
+        }
+
+        /* Buttons - primary (cyan) and ghost */
+        .start-actions { display: flex; flex-direction: column; gap: 10px; margin-top: 4px; }
+        .menu-btn {
+            position: relative;
+            width: 100%;
+            padding: 13px 18px;
+            border-radius: 10px;
+            border: 1px solid rgba(0, 220, 255, 0.55);
+            background: linear-gradient(180deg, rgba(0, 220, 255, 0.18) 0%, rgba(0, 130, 200, 0.10) 100%);
+            color: #eaf6ff;
+            font: 700 13px 'Inter', system-ui, sans-serif;
+            letter-spacing: 2.5px; text-transform: uppercase;
+            cursor: pointer;
+            transition: transform 0.12s ease, box-shadow 0.18s ease, background 0.18s ease;
+            box-shadow: 0 0 20px rgba(0, 200, 255, 0.20), inset 0 0 16px rgba(0, 200, 255, 0.10);
+            direction: ltr; unicode-bidi: isolate;
+        }
+        .menu-btn:hover {
+            background: linear-gradient(180deg, rgba(0, 230, 255, 0.30) 0%, rgba(0, 130, 200, 0.18) 100%);
+            box-shadow: 0 0 28px rgba(0, 220, 255, 0.45), inset 0 0 20px rgba(0, 220, 255, 0.18);
+        }
+        .menu-btn:active { transform: scale(0.985); }
+        .menu-btn.primary {
+            border-color: rgba(255, 90, 200, 0.65);
+            background: linear-gradient(180deg, rgba(255, 80, 200, 0.22) 0%, rgba(120, 0, 160, 0.18) 100%);
+            box-shadow: 0 0 22px rgba(255, 80, 200, 0.30), inset 0 0 16px rgba(255, 80, 200, 0.14);
+            color: #ffeefa;
+        }
+        .menu-btn.primary:hover {
+            background: linear-gradient(180deg, rgba(255, 100, 220, 0.34) 0%, rgba(140, 0, 180, 0.26) 100%);
+            box-shadow: 0 0 32px rgba(255, 100, 220, 0.55), inset 0 0 20px rgba(255, 100, 220, 0.22);
+        }
+        .menu-btn[disabled] {
+            opacity: 0.45;
+            cursor: not-allowed;
+            filter: grayscale(40%);
+            box-shadow: none;
+        }
+        .menu-btn[disabled]:hover { background: linear-gradient(180deg, rgba(0, 220, 255, 0.18) 0%, rgba(0, 130, 200, 0.10) 100%); box-shadow: none; }
+
+        /* Wallet status block */
+        .wallet-status { margin-top: 14px; display: flex; flex-direction: column; gap: 6px; align-items: center; }
+        .wallet-chip {
+            display: inline-flex; align-items: center; gap: 8px;
+            padding: 6px 12px; border-radius: 999px;
+            background: rgba(0, 220, 120, 0.10);
+            border: 1px solid rgba(0, 230, 140, 0.30);
+            color: #aaffc8;
+            font: 700 11px 'JetBrains Mono', monospace;
+            letter-spacing: 1px;
+            min-height: 16px;
+        }
+        .wallet-chip:empty { display: none; }
+        .wallet-chip::before {
+            content: ""; width: 6px; height: 6px; border-radius: 50%;
+            background: #00ff95; box-shadow: 0 0 6px #00ff95;
+        }
+        #walletMsg {
+            color: #ffd77a;
+            font: 600 11px 'JetBrains Mono', monospace;
+            letter-spacing: 0.5px;
+            text-align: center;
+            min-height: 14px;
+            direction: ltr; unicode-bidi: isolate;
+        }
+
+        /* Footer */
+        .menu-footer {
+            margin-top: 16px; padding-top: 14px;
+            border-top: 1px solid rgba(0, 220, 255, 0.10);
+            display: flex; justify-content: space-between; align-items: center;
+            color: #4a6f8c; font: 600 9px 'JetBrains Mono', monospace;
+            letter-spacing: 1.5px; text-transform: uppercase;
+        }
+        .menu-footer .left  { color: #ff7bd0; }
+        .menu-footer .right { color: #66e1ff; }
+
+        @media (max-height: 720px) {
+            .menu-wrap { padding: 20px 22px 18px; }
+            .neon-word { font-size: 36px; }
+            .neon-word.small { font-size: 24px; letter-spacing: 6px; }
+            .stats-grid { margin: 12px 0; }
+        }
 
         /* Settings button on start screen */
         .menu-icons { position: fixed; top: 12px; right: 12px; z-index: 31; display: flex; gap: 8px; }
@@ -337,13 +467,19 @@
     <canvas id="gameCanvas"></canvas>
     <!-- removed: pause icon near top score (we moved it into HUD) -->
 
-    <!-- [JDID] Start Menu Overlay -->
+    <!-- Start Menu Overlay -->
     <div class="start-overlay" id="startMenu">
-        <!-- settings gear removed per request -->
+        <!-- Top bar: brand + GenLayer chip -->
+        <div class="top-bar">
+            <div class="brand-mark"><span class="dot"></span> GenClash // Arena</div>
+            <div class="gl-badge">Powered by <b>GenLayer</b></div>
+        </div>
+
+        <!-- Settings panel (hidden by default; preserved for future use) -->
         <div class="settings-panel" id="settingsPanel" style="display:none;">
             <div class="settings-row">
                 <div class="settings-label">Sound</div>
-                <button class="settings-toggle" id="btnSoundToggle">Sound: ON</button>
+                <button id="btnSoundToggle" class="settings-toggle">Sound: ON</button>
             </div>
             <div class="settings-row">
                 <div class="settings-label">Music Style</div>
@@ -353,27 +489,53 @@
                 </select>
             </div>
         </div>
+
+        <!-- Centered card -->
         <div class="menu-wrap">
-            <div class="neon-title">
-                <div class="neon-word">GENCLASH</div>
-                <div class="neon-word small">ARENA</div>
-            </div>
             <div class="hero-icons" aria-hidden="true">
                 <span class="puck red"></span>
                 <span class="puck blue"></span>
             </div>
+
+            <div class="neon-title">
+                <div class="title-eyebrow">// Optimistic Democracy Arcade</div>
+                <div class="neon-word">GENCLASH</div>
+                <div class="neon-word small">ARENA</div>
+                <div class="title-tagline">
+                    Neon air-hockey. AI validators judge every match.
+                    <br/>Earn <em>on-chain XP</em> via Optimistic Democracy.
+                </div>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-label">Network</div>
+                    <div class="stat-value cyan">Bradbury</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Entry Fee</div>
+                    <div class="stat-value">0.001 GEN</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Mode</div>
+                    <div class="stat-value">Solo · AI</div>
+                </div>
+            </div>
+
             <div class="start-actions">
-                <button class="menu-btn" id="btnConnect">CONNECT WALLET</button>
-                <button class="menu-btn" id="btnStart">START GAME</button>
+                <button class="menu-btn" id="btnConnect">Connect Wallet</button>
+                <button class="menu-btn primary" id="btnStart">Start Match</button>
             </div>
-            <div style="color:#aaffc8; font:bold 14px Arial; text-shadow:0 0 10px #7fffd4;">
-                <span id="walletAddr"></span>
-                <span id="walletMsg" style="display:block; margin-top:6px;
-                    color:#ffd77a; text-shadow:0 0 8px #ffd77a;
-                    font:bold 13px Arial;
-                "></span>
+
+            <div class="wallet-status">
+                <span class="wallet-chip" id="walletAddr"></span>
+                <span id="walletMsg"></span>
             </div>
-            <!-- NB: 1 PLAYER و SHOP مانديروهمش دابا -->
+
+            <div class="menu-footer">
+                <span class="left">/// AI Consensus</span>
+                <span class="right">v0.1 · Testnet</span>
+            </div>
         </div>
     </div>
 
