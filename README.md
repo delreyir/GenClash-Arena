@@ -2,6 +2,10 @@
 
 > On-chain arcade, judged by AI validators on **GenLayer**.
 
+> **Reviewing this project?** Jump straight to [**CONFORMANCE.md**](./CONFORMANCE.md)
+> for a line-by-line mapping of every GenLayer-docs requirement to its
+> implementation in this repo (contract + frontend + SDK usage + tx lifecycle).
+
 An on-chain arcade running on the **GenLayer Bradbury testnet**. Match
 results are judged by AI validators through GenLayer's **Optimistic Democracy**
 consensus, and XP is distributed on-chain via an Intelligent Contract.
