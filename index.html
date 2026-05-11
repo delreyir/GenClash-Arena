@@ -751,6 +751,7 @@
             <div class="result-score" id="loseScore">0:3</div>
             <div class="result-sub" id="loseSub">Press Restart to play again</div>
             <button class="menu-btn primary" id="btnRestart">RESTART</button>
+            <button class="menu-btn" id="btnHomeLose" style="margin-top:10px;">HOME</button>
             <a class="faucet-link" style="margin-top:14px; min-width:260px;" href="https://testnet-faucet.genlayer.foundation" target="_blank" rel="noopener">
                 <span>Low on GEN?</span>
                 <b>Get faucet →</b>
@@ -764,6 +765,7 @@
             <div class="result-title result-title-win">YOU WIN</div>
             <div class="result-score" id="winScore">3:0</div>
             <button class="menu-btn" id="btnNextLevel">NEXT LEVEL</button>
+            <button class="menu-btn" id="btnHomeWin" style="margin-top:10px;">HOME</button>
         </div>
     </div>
 
@@ -773,6 +775,7 @@
             <div class="result-title result-title-win">CONGRATULATIONS</div>
             <div class="result-sub" id="congratsSub">You completed Level 10!</div>
             <button class="menu-btn" id="btnPlayAgain10">PLAY AGAIN</button>
+            <button class="menu-btn" id="btnHomeCongrats" style="margin-top:10px;">HOME</button>
         </div>
     </div>
 
@@ -1306,15 +1309,29 @@ const PADDLE_RADIUS = Math.round(38 * SCALE); // enlarged player & AI paddles
             updateSoundLabel();
             if (btnContinue) btnContinue.addEventListener('click', () => { isPaused = false; updatePauseUI(); hidePauseOverlay(); });
             if (pauseOverlay) pauseOverlay.addEventListener('click', () => { isPaused = false; updatePauseUI(); hidePauseOverlay(); });
-            if (btnQuit) btnQuit.addEventListener('click', () => {
+            function goHome(){
                 hidePauseOverlay();
+                const loseOv = document.getElementById('loseOverlay');
+                const winOv  = document.getElementById('winOverlay');
+                const congOv = document.getElementById('congratsOverlay');
+                if (loseOv) loseOv.style.display = 'none';
+                if (winOv)  winOv.style.display  = 'none';
+                if (congOv) congOv.style.display = 'none';
                 // رجعنا لصفحة البداية
                 isPaused = true; updatePauseUI();
                 isOnStartMenu = true;
                 stopAmbient();
                 stopMenuMusic();
+                if (hudPanel) hudPanel.style.display = 'none';
                 if (startMenu) startMenu.style.display = 'grid';
-            });
+            }
+            if (btnQuit) btnQuit.addEventListener('click', goHome);
+            const btnHomeLose     = document.getElementById('btnHomeLose');
+            const btnHomeWin      = document.getElementById('btnHomeWin');
+            const btnHomeCongrats = document.getElementById('btnHomeCongrats');
+            if (btnHomeLose)     btnHomeLose.addEventListener('click', goHome);
+            if (btnHomeWin)      btnHomeWin.addEventListener('click', goHome);
+            if (btnHomeCongrats) btnHomeCongrats.addEventListener('click', goHome);
 
             let playerScore = 0;
             let aiScore = 0;
