@@ -956,8 +956,30 @@
           `${label} <a href="${EXPLORER_TX(hash)}" target="_blank" rel="noopener" ` +
           `style="color:#7cf;text-decoration:underline;">${short}</a> · <b>${statusWord}</b>`;
       }
+      // GenLayer numeric status enum (per docs):
+      //   0 UNINITIALIZED · 1 PENDING · 2 PROPOSING · 3 COMMITTING · 4 REVEALING
+      //   5 ACCEPTED · 6 UNDETERMINED · 7 FINALIZED · 8 CANCELED
+      //   9 APPEAL_REVEALING · 10 APPEAL_COMMITTING · 11 READY_TO_FINALIZE
+      //   12 VALIDATORS_TIMEOUT · 13 LEADER_TIMEOUT
+      const STATUS_NAME_BY_INDEX = [
+        'UNINITIALIZED','PENDING','PROPOSING','COMMITTING','REVEALING',
+        'ACCEPTED','UNDETERMINED','FINALIZED','CANCELED',
+        'APPEAL_REVEALING','APPEAL_COMMITTING','READY_TO_FINALIZE',
+        'VALIDATORS_TIMEOUT','LEADER_TIMEOUT',
+      ];
+      function normalizeStatus(raw){
+        if (raw == null) return '';
+        if (typeof raw === 'number') return STATUS_NAME_BY_INDEX[raw] || `STATUS_${raw}`;
+        const s = String(raw).trim().toUpperCase();
+        // SDK sometimes returns the digit as a string ("5") instead of the name.
+        if (/^\d+$/.test(s)){
+          const n = parseInt(s, 10);
+          return STATUS_NAME_BY_INDEX[n] || `STATUS_${n}`;
+        }
+        return s;
+      }
       // Statuses that mean "done for gameplay purposes".
-      const DONE_STATUSES = new Set(['ACCEPTED','FINALIZED']);
+      const DONE_STATUSES = new Set(['ACCEPTED','FINALIZED','READY_TO_FINALIZE']);
       // Statuses that mean "this tx will never succeed".
       const FAIL_STATUSES = new Set(['CANCELED','UNDETERMINED','LEADER_TIMEOUT','VALIDATORS_TIMEOUT']);
 
@@ -967,30 +989,25 @@
         label      = 'Entry fee',
       } = {}){
         const t0 = Date.now();
-        let lastStatus = 'PENDING';
+        let lastStatus = '';
         renderTxStatus(label, txHash, 'PENDING (submitted)');
         while (Date.now() - t0 < maxMs){
           await new Promise(r => setTimeout(r, pollEveryMs));
           let tx = null;
           try { tx = await glClient.getTransaction({ hash: txHash }); } catch(_){}
-          // Status can be a string ("PENDING","ACCEPTED",...) or numeric enum.
           const raw = tx && (tx.status ?? tx.statusName ?? tx.state);
-          const status = typeof raw === 'string' ? raw.toUpperCase() : String(raw || '').toUpperCase();
-          if (status && status !== lastStatus){
+          const status = normalizeStatus(raw);
+          const elapsed = Math.round((Date.now()-t0)/1000);
+          if (status){
+            renderTxStatus(label, txHash, `${status} (${elapsed}s)`);
             lastStatus = status;
-            const elapsed = Math.round((Date.now()-t0)/1000);
-            renderTxStatus(label, txHash, `${status} (${elapsed}s)`);
-          } else if (status){
-            // Keep a live timer ticking so the user knows we're alive.
-            const elapsed = Math.round((Date.now()-t0)/1000);
-            renderTxStatus(label, txHash, `${status} (${elapsed}s)`);
           }
           if (DONE_STATUSES.has(status)) return tx;
           if (FAIL_STATUSES.has(status)){
             throw new Error(`Transaction ${status}. Check explorer for details.`);
           }
         }
-        throw new Error('Timed out waiting for validators. Tx may still finalize later.');
+        throw new Error(`Timed out waiting for validators (last seen: ${lastStatus || 'unknown'}).`);
       }
 
       async function payToPlay(){
