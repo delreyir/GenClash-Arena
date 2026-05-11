@@ -819,10 +819,11 @@
 
     <!-- =====================================================================
          GenLayer integration (Testnet Bradbury)
-         - Uses genlayer-js (loaded from esm.sh) for Intelligent Contract calls.
-         - Wallet: any EIP-1193 injected provider (MetaMask, Rabby, ...).
+         - Uses genlayer-js with provider: window.ethereum (vanilla EIP-1193).
+         - NO MetaMask Snap dependency: works with MetaMask, Rabby, Coinbase
+           Wallet, Frame, Trust, or any other injected wallet.
          - Flow:  Connect -> ensure chain 0x107d -> pay_to_play (payable)
-                  -> play match -> on win/lose: record_result (AI judged).
+                  -> play level -> on win: report_win / on lose: report_loss.
          ==================================================================== -->
     <script type="module">
       import { createClient } from 'https://esm.sh/genlayer-js@latest';
@@ -885,13 +886,23 @@
         }
       }
 
+      // Build a single client that signs through the injected EIP-1193 provider.
+      // Passing `provider: window.ethereum` makes genlayer-js use vanilla
+      // wallet_sendTransaction under the hood instead of the MetaMask Snap.
+      // This works with MetaMask (without Snap), Rabby, Coinbase Wallet,
+      // Frame, and any other EIP-1193 compatible wallet.
       async function buildClient(){
         if (!userAddress) throw new Error('Wallet not connected');
+        const provider = getInjectedProvider();
+        if (!provider) throw new Error('No EVM wallet detected.');
         glClient = createClient({
           chain: testnetBradbury,
           account: userAddress,
+          provider,            // <-- vanilla EIP-1193, no Snap required
         });
-        try { await glClient.connect('testnetBradbury'); } catch(_) {}
+        // NOTE: intentionally NOT calling glClient.connect('testnetBradbury') -
+        // that would trigger MetaMask Snap installation. We perform the chain
+        // switch ourselves via ensureGenLayerChain(provider).
         return glClient;
       }
 
@@ -902,7 +913,7 @@
         btnConnect.disabled = true; btnConnect.textContent = 'CONNECTING...';
         try{
           const provider = getInjectedProvider();
-          if (!provider) throw new Error('No EVM wallet (install MetaMask).');
+          if (!provider) throw new Error('No EVM wallet found. Install MetaMask, Rabby, or any EIP-1193 wallet.');
           setStatus('2/3: Requesting accounts...');
           const accs = await provider.request({ method: 'eth_requestAccounts' });
           userAddress = Array.isArray(accs) ? accs[0] : null;
