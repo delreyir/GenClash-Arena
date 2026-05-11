@@ -544,54 +544,102 @@
         .level-item.active { border-color:#24ff8d; box-shadow:0 0 12px 4px #24ff8d; }
         .dev-btn { padding:6px 10px; border:2px solid #24ff8d; border-radius:8px; color:#fff; font:bold 12px Arial; background:transparent; box-shadow:0 0 10px 3px #24ff8d; cursor:pointer; }
 
-         /* --- [JDID] Pause Overlay (Top Center) --- */
-         .pause-overlay { 
-            position: fixed; 
-            top: 14px; /* Bdlna inset l top */
-            left: 50%; /* Zdna hado bach tji f wst */
-            transform: translateX(-50%); /* Zdna hado bach tji f wst */
-            /* 7eydna display: grid, place-items, w background */
-            z-index: 45; 
+         /* --- Pause Overlay (Centered modal, neon style) --- */
+         .pause-overlay {
+            position: fixed;
+            inset: 0;
+            display: grid;
+            place-items: center;
+            background: radial-gradient(ellipse at center, rgba(10,4,30,0.78), rgba(0,0,0,0.92));
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+            z-index: 60;
          }
-         .pause-panel { 
-            width: 260px; 
-            max-width: 90vw; 
-            padding: 12px 14px; 
-            border: 2px solid #ffb84d; 
-            border-radius: 12px; 
-            box-shadow: 0 0 14px 4px #ffb84d; 
-            background: rgba(20,20,30,0.85); /* Ghmmqna l'background chwia */
-            display:flex; 
-            flex-direction:column; 
-            gap:8px;
-            align-items: center; /* <<< [JDIID] HADI bach t'centri l'ktaba */
-        }
-         .pause-title { color:#ffd77a; font:bold 20px Arial; text-shadow:0 0 10px #ffd77a; }
-         .pause-sub { color:#bfbfbf; font:bold 14px Arial; text-shadow:0 0 6px #777; }
-         .pause-actions { 
-            display:flex; 
-            gap:10px;
-            justify-content: center; /* <<< [JDIID] HADI bach t'centri l'buttons */
-        }
-         .btn-quit, .btn-continue { 
-            padding: 8px 12px; 
-            border: 2px solid transparent; 
-            border-radius:10px; 
-            background:transparent; 
-            color:#fff; 
-            font:bold 14px Arial; 
-            cursor:pointer; 
-            box-shadow: none; /* <<< [JDIID] 7eydna shadow */
-        }
-         .btn-quit { 
-            border-color:transparent; /* <<< [JDIID] Bla border */
-            color: #ff6b6b; /* Ghir loun 7mer */
-        }
-         .btn-continue { 
-            border-color:#ffd77a; /* <<< [JDIID] Border sfer */
-            background: rgba(255, 255, 255, 0.1); /* Background chfaf */
-            box-shadow: 0 0 10px 3px #ffd77a; /* Rj3na shadow hna */
-        }
+         .pause-panel {
+            min-width: 300px;
+            max-width: 92vw;
+            padding: 28px 32px 24px;
+            border: 1px solid rgba(255, 215, 122, 0.5);
+            border-radius: 18px;
+            background: linear-gradient(180deg, rgba(28, 22, 50, 0.92) 0%, rgba(14, 10, 32, 0.95) 100%);
+            box-shadow:
+                0 0 0 1px rgba(255, 255, 255, 0.04) inset,
+                0 0 28px 4px rgba(255, 184, 77, 0.35),
+                0 22px 60px rgba(0, 0, 0, 0.55);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            text-align: center;
+            position: relative;
+            animation: pauseIn 180ms ease-out;
+         }
+         @keyframes pauseIn {
+            from { transform: scale(0.94); opacity: 0; }
+            to   { transform: scale(1);    opacity: 1; }
+         }
+         .pause-eyebrow {
+            font: 700 11px/1 'Segoe UI', system-ui, Arial;
+            letter-spacing: 4px;
+            color: #7cf;
+            text-shadow: 0 0 8px rgba(124, 204, 255, 0.45);
+            margin-bottom: 4px;
+         }
+         .pause-title {
+            color: #ffd77a;
+            font: 800 34px/1 'Segoe UI', system-ui, Arial;
+            letter-spacing: 6px;
+            text-shadow: 0 0 14px rgba(255, 215, 122, 0.55);
+            margin: 0;
+         }
+         .pause-sub {
+            color: rgba(255, 255, 255, 0.55);
+            font: 600 12px/1.4 'Segoe UI', system-ui, Arial;
+            letter-spacing: 1.2px;
+            margin-top: 4px;
+            margin-bottom: 18px;
+            text-transform: uppercase;
+         }
+         .pause-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            width: 100%;
+         }
+         .btn-quit, .btn-continue {
+            flex: 1;
+            padding: 12px 22px;
+            border-radius: 12px;
+            font: 700 13px/1 'Segoe UI', system-ui, Arial;
+            letter-spacing: 2px;
+            cursor: pointer;
+            transition: transform 120ms ease, box-shadow 120ms ease, background 120ms ease;
+            text-transform: uppercase;
+         }
+         .btn-quit {
+            background: transparent;
+            border: 1px solid rgba(255, 107, 107, 0.45);
+            color: #ff8b8b;
+         }
+         .btn-quit:hover {
+            background: rgba(255, 107, 107, 0.12);
+            box-shadow: 0 0 18px rgba(255, 107, 107, 0.35);
+            transform: translateY(-1px);
+         }
+         .btn-continue {
+            background: linear-gradient(180deg, rgba(255, 215, 122, 0.92) 0%, rgba(255, 184, 77, 0.95) 100%);
+            border: 1px solid rgba(255, 232, 170, 0.85);
+            color: #1a120a;
+            box-shadow:
+                0 0 18px rgba(255, 184, 77, 0.55),
+                0 6px 16px rgba(0, 0, 0, 0.35);
+         }
+         .btn-continue:hover {
+            box-shadow:
+                0 0 24px rgba(255, 215, 122, 0.85),
+                0 8px 20px rgba(0, 0, 0, 0.4);
+            transform: translateY(-1px);
+         }
 
         /* --- Pause icon inside HUD panel (Style Jdid) --- */
         .hud-pause {
@@ -827,9 +875,10 @@
 
     <!-- [JDID] Pause Overlay -->
     <div class="pause-overlay" id="pauseOverlay" style="display:none;">
-        <div class="pause-panel">
+        <div class="pause-panel" id="pausePanel">
+            <div class="pause-eyebrow">/// GAME PAUSED</div>
             <div class="pause-title">PAUSE</div>
-            <div class="pause-sub">CLICK TO CONTINUE</div>
+            <div class="pause-sub">Take a breath</div>
             <div class="pause-actions">
                 <button class="btn-quit" id="btnQuit">QUIT</button>
                 <button class="btn-continue" id="btnContinue">CONTINUE</button>
@@ -1472,7 +1521,7 @@ const PADDLE_RADIUS = Math.round(38 * SCALE); // enlarged player & AI paddles
                 if (!pauseBtn) return;
                 pauseBtn.classList.toggle('paused', isPaused);
             }
-            function showPauseOverlay() { if (pauseOverlay && !isOnStartMenu) pauseOverlay.style.display = 'block'; }
+            function showPauseOverlay() { if (pauseOverlay && !isOnStartMenu) pauseOverlay.style.display = 'grid'; }
             function hidePauseOverlay() { if (pauseOverlay) pauseOverlay.style.display = 'none'; }
             function togglePause() {
                 isPaused = !isPaused;
@@ -1518,7 +1567,12 @@ const PADDLE_RADIUS = Math.round(38 * SCALE); // enlarged player & AI paddles
             if (hudPanel) hudPanel.style.display = 'none';
             updateSoundLabel();
             if (btnContinue) btnContinue.addEventListener('click', () => { isPaused = false; updatePauseUI(); hidePauseOverlay(); });
-            if (pauseOverlay) pauseOverlay.addEventListener('click', () => { isPaused = false; updatePauseUI(); hidePauseOverlay(); });
+            // Click on the dimmed background (NOT inside the panel) also resumes.
+            if (pauseOverlay) pauseOverlay.addEventListener('click', (e) => {
+                if (e.target === pauseOverlay){
+                    isPaused = false; updatePauseUI(); hidePauseOverlay();
+                }
+            });
             function goHome(){
                 hidePauseOverlay();
                 const loseOv = document.getElementById('loseOverlay');
@@ -2602,6 +2656,33 @@ const PADDLE_RADIUS = Math.round(38 * SCALE); // enlarged player & AI paddles
                 const bA = getLevel3Bounds(ai.y);
                 const minAIX = bA.left + ai.radius + BORDER_WIDTH;
                 const maxAIX = bA.right - ai.radius - BORDER_WIDTH;
+                if (ai.x < minAIX) ai.x = minAIX;
+                if (ai.x > maxAIX) ai.x = maxAIX;
+
+                // --- [FIX] Obstacle avoidance: don't let the AI walk into a
+                // static obstacle. Push AI radially out of any obstacle it
+                // overlaps, then re-clamp to its half + side bounds.
+                function pushAIOutOf(obs){
+                    if (!obs || obs.x == null || obs.y == null) return;
+                    const obsR = obs.radius || 40;
+                    const minDist = ai.radius + obsR + 4;
+                    let dx = ai.x - obs.x;
+                    let dy = ai.y - obs.y;
+                    let d  = Math.hypot(dx, dy);
+                    if (d === 0){ dx = 1; dy = 0; d = 1; } // exact overlap
+                    if (d < minDist){
+                        const push = (minDist - d);
+                        ai.x += (dx / d) * push;
+                        ai.y += (dy / d) * push;
+                    }
+                }
+                pushAIOutOf(obstacle);
+                if (currentLevel === 5 || currentLevel === 6 || currentLevel === 10){
+                    pushAIOutOf(obstacle2);
+                }
+                // Re-clamp after pushing so AI stays in its half + walls.
+                if (ai.y > TABLE_HEIGHT / 2 - ai.radius) ai.y = TABLE_HEIGHT / 2 - ai.radius;
+                if (ai.y < ai.radius + BORDER_WIDTH)     ai.y = ai.radius + BORDER_WIDTH;
                 if (ai.x < minAIX) ai.x = minAIX;
                 if (ai.x > maxAIX) ai.x = maxAIX;
 
