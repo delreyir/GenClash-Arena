@@ -764,6 +764,23 @@
         <div class="result-wrap">
             <div class="result-title result-title-win">YOU WIN</div>
             <div class="result-score" id="winScore">3:0</div>
+            <!-- AI judge verdict (live from on-chain consensus) -->
+            <div id="aiJudgeBox" style="
+                margin: 8px auto 14px; padding: 10px 14px;
+                border: 1px solid #44d3ff55; border-radius: 10px;
+                background: rgba(20,30,60,0.55); max-width: 340px;
+                color: #b9e2ff; font-size: 13px; line-height: 1.4;
+                text-align: center;">
+                <div style="font-size:11px; letter-spacing:1.5px; color:#7cf; margin-bottom:4px;">
+                    /// AI JUDGE (ON-CHAIN)
+                </div>
+                <div id="aiJudgeStatus">Submitting match for AI consensus...</div>
+                <div id="aiJudgeReason" style="margin-top:6px; color:#cde; font-style:italic; font-size:12px;"></div>
+                <a id="aiJudgeLink" href="#" target="_blank" rel="noopener"
+                   style="display:none; margin-top:6px; font-size:11px; color:#7cf; text-decoration:underline;">
+                    view tx on explorer →
+                </a>
+            </div>
             <button class="menu-btn" id="btnNextLevel">NEXT LEVEL</button>
             <button class="menu-btn" id="btnHomeWin" style="margin-top:10px;">HOME</button>
         </div>
@@ -1045,15 +1062,67 @@
       // The contract's report_win invokes an LLM via gl.vm.run_nondet_unsafe,
       // so the level only advances if the AI referee + validators agree the
       // reported score / duration are plausible (Equivalence Principle).
+      // We also drive a live verdict UI on the WIN overlay so the player can
+      // see the AI judge's decision streaming in from on-chain consensus.
+      function aiJudgeUI(){
+        return {
+          status: document.getElementById('aiJudgeStatus'),
+          reason: document.getElementById('aiJudgeReason'),
+          link:   document.getElementById('aiJudgeLink'),
+        };
+      }
+      function aiJudgeSet(statusText, reasonText, color, txHash){
+        const ui = aiJudgeUI();
+        if (ui.status){
+          ui.status.textContent = statusText;
+          if (color) ui.status.style.color = color;
+        }
+        if (ui.reason) ui.reason.textContent = reasonText || '';
+        if (ui.link && txHash){
+          ui.link.href = EXPLORER_TX(txHash);
+          ui.link.style.display = 'inline-block';
+        }
+      }
+      function aiJudgeReset(){
+        aiJudgeSet('Submitting match for AI consensus...', '', '#b9e2ff', null);
+        const ui = aiJudgeUI();
+        if (ui.link) ui.link.style.display = 'none';
+      }
+      // Try to extract the LLM verdict ({"valid":..., "reason":...}) from a
+      // GenLayer tx receipt. The exact field name varies by SDK version, so
+      // we search a handful of likely paths defensively.
+      function extractLlmVerdict(tx){
+        if (!tx || typeof tx !== 'object') return null;
+        const candidates = [
+          tx.consensus_data?.leader_receipt?.result,
+          tx.consensus_data?.leader_receipt?.execution_result,
+          tx.consensus_data?.leader_receipt?.contract_state,
+          tx.leader_receipt?.result,
+          tx.execution_result?.result,
+          tx.result,
+        ];
+        for (const c of candidates){
+          if (!c) continue;
+          if (typeof c === 'object' && 'valid' in c) return c;
+          if (typeof c === 'string'){
+            try {
+              const parsed = JSON.parse(c);
+              if (parsed && 'valid' in parsed) return parsed;
+            } catch(_) {}
+          }
+        }
+        return null;
+      }
       async function reportWin(scoreUs, scoreAi, durationS){
         if (!contractReady()) return null;
         try{
-          // Sane defaults if the caller did not pass match data.
           const us  = Number.isFinite(scoreUs) ? scoreUs : 3;
           const ai  = Number.isFinite(scoreAi) ? scoreAi : 0;
           const dur = Number.isFinite(durationS)
             ? durationS
             : Math.max(5, Math.round((Date.now() - matchStartTs) / 1000));
+          aiJudgeReset();
+          aiJudgeSet(`Submitting (${us}-${ai}, ${dur}s) to AI judge...`, '', '#b9e2ff', null);
           setStatus(`Submitting win to AI judge (${us}-${ai}, ${dur}s)...`);
           const txHash = await glClient.writeContract({
             address: GENCLASH_CONTRACT,
@@ -1062,18 +1131,50 @@
           });
           clog('report_win tx:', txHash);
           renderTxStatus('AI judge', txHash, 'PENDING (LLM in consensus)');
-          // Don't block gameplay on the AI verdict; surface the live status.
+          aiJudgeSet('Validators voting (LLM in consensus)...', `Tx ${txHash.slice(0,10)}...`, '#b9e2ff', txHash);
+
+          // Stream status updates into the WIN overlay as well as the sidebar.
           (async () => {
-            try{
-              await waitForAccepted(txHash, { label: 'AI judge', maxMs: 25*60*1000 });
-              renderTxStatus('AI judge', txHash, 'ACCEPTED ✓ · win recorded');
-            }catch(e){
-              renderTxStatus('AI judge', txHash, 'rejected or pending (check explorer)');
+            const t0 = Date.now();
+            const pollMs = 3000;
+            const hardCap = 25 * 60 * 1000;
+            while (Date.now() - t0 < hardCap){
+              await new Promise(r => setTimeout(r, pollMs));
+              let tx = null;
+              try { tx = await glClient.getTransaction({ hash: txHash }); } catch(_){}
+              const raw = tx && (tx.status ?? tx.statusName ?? tx.state);
+              const status = normalizeStatus(raw);
+              const elapsed = Math.round((Date.now()-t0)/1000);
+              if (status){
+                renderTxStatus('AI judge', txHash, `${status} (${elapsed}s)`);
+                aiJudgeSet(`${status} (${elapsed}s)`, 'Validators are re-running the LLM independently.', '#b9e2ff', txHash);
+              }
+              if (DONE_STATUSES.has(status)){
+                const verdict = extractLlmVerdict(tx);
+                if (verdict && verdict.valid === false){
+                  aiJudgeSet('✗ Rejected by AI consensus', verdict.reason || 'AI judge rejected the match.', '#ff7799', txHash);
+                  renderTxStatus('AI judge', txHash, 'REJECTED ✗');
+                } else if (verdict && verdict.valid === true){
+                  aiJudgeSet('✓ Accepted by AI consensus', verdict.reason || 'Match deemed plausible.', '#9bff9b', txHash);
+                  renderTxStatus('AI judge', txHash, 'ACCEPTED ✓ · win recorded');
+                } else {
+                  aiJudgeSet('✓ Accepted on-chain', 'Verdict applied. Click the tx link to see the LLM output.', '#9bff9b', txHash);
+                  renderTxStatus('AI judge', txHash, 'ACCEPTED ✓ · win recorded');
+                }
+                return;
+              }
+              if (FAIL_STATUSES.has(status)){
+                aiJudgeSet(`✗ ${status}`, 'AI judge rejected or consensus failed.', '#ff7799', txHash);
+                renderTxStatus('AI judge', txHash, `${status} ✗`);
+                return;
+              }
             }
+            aiJudgeSet('Still processing...', 'Validators are slow today; verdict will land later. Tx is real and on-chain.', '#d7c98a', txHash);
           })();
           return txHash;
         }catch(e){
           console.error('report_win error:', e);
+          aiJudgeSet('Could not submit', String(e?.message || e), '#ff7799', null);
           setStatus('Could not submit win to AI judge.');
           return null;
         }
