@@ -47,8 +47,162 @@
             -moz-user-select: none;
         }
 
-        /* --- [JDID] Side HUD --- */
+        /* --- Game Top HUD: AI · LEVEL · YOU (clean cyber boxes) --- */
+        .game-hud {
+            position: fixed;
+            top: 12px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            align-items: stretch;
+            gap: 10px;
+            z-index: 12;
+            font: 700 11px/1 'Segoe UI', system-ui, -apple-system, sans-serif;
+            pointer-events: none;
+        }
+        .hud-box {
+            min-width: 64px;
+            padding: 8px 14px 9px;
+            border: 1px solid rgba(124, 204, 255, 0.32);
+            border-radius: 10px;
+            background: linear-gradient(180deg, rgba(18, 26, 52, 0.86) 0%, rgba(10, 14, 32, 0.92) 100%);
+            box-shadow:
+                0 0 0 1px rgba(255, 255, 255, 0.03) inset,
+                0 0 14px rgba(68, 211, 255, 0.16),
+                0 6px 18px rgba(0, 0, 0, 0.45);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            text-align: center;
+        }
+        .hud-box-label {
+            font-size: 9px;
+            letter-spacing: 2.5px;
+            color: rgba(124, 204, 255, 0.85);
+            text-transform: uppercase;
+        }
+        .hud-box-value {
+            font: 800 22px/1 'Segoe UI', system-ui, sans-serif;
+            color: #ffffff;
+            text-shadow: 0 0 10px rgba(124, 204, 255, 0.55);
+            letter-spacing: 0.5px;
+        }
+        .hud-box.hud-ai    { border-color: rgba(255, 0, 200, 0.45); }
+        .hud-box.hud-ai    .hud-box-label { color: rgba(255, 130, 220, 0.95); }
+        .hud-box.hud-ai    .hud-box-value { text-shadow: 0 0 12px rgba(255, 0, 200, 0.6); }
+        .hud-box.hud-you   { border-color: rgba(0, 230, 255, 0.45); }
+        .hud-box.hud-you   .hud-box-label { color: rgba(120, 235, 255, 0.95); }
+        .hud-box.hud-you   .hud-box-value { text-shadow: 0 0 12px rgba(0, 230, 255, 0.6); }
+        .hud-box.hud-level {
+            min-width: 78px;
+            border-color: rgba(255, 215, 122, 0.55);
+            background: linear-gradient(180deg, rgba(54, 36, 12, 0.86) 0%, rgba(28, 18, 6, 0.92) 100%);
+            box-shadow:
+                0 0 0 1px rgba(255, 255, 255, 0.04) inset,
+                0 0 18px rgba(255, 184, 77, 0.32),
+                0 6px 18px rgba(0, 0, 0, 0.45);
+        }
+        .hud-box.hud-level .hud-box-label { color: rgba(255, 215, 122, 0.95); }
+        .hud-box.hud-level .hud-box-value { color: #ffd77a; text-shadow: 0 0 12px rgba(255, 184, 77, 0.7); }
+
+        /* --- Bottom pause/mute pill (clean) --- */
+        .game-controls {
+            position: fixed;
+            bottom: 14px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 8px;
+            z-index: 12;
+        }
+        .game-control-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 9px 18px;
+            border: 1px solid rgba(124, 204, 255, 0.36);
+            border-radius: 999px;
+            background: linear-gradient(180deg, rgba(18, 26, 52, 0.88) 0%, rgba(10, 14, 32, 0.92) 100%);
+            color: #d7eaff;
+            font: 700 11px/1 'Segoe UI', system-ui, sans-serif;
+            letter-spacing: 2.2px;
+            text-transform: uppercase;
+            cursor: pointer;
+            box-shadow:
+                0 0 0 1px rgba(255, 255, 255, 0.03) inset,
+                0 0 14px rgba(68, 211, 255, 0.18),
+                0 6px 18px rgba(0, 0, 0, 0.45);
+            transition: transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease;
+        }
+        .game-control-btn:hover { transform: translateY(-1px); border-color: rgba(124, 204, 255, 0.6); }
+        .game-control-btn .icon {
+            display: inline-block; width: 10px; height: 12px;
+            position: relative;
+        }
+        .game-control-btn.is-pause .icon::before,
+        .game-control-btn.is-pause .icon::after {
+            content: ""; position: absolute; top: 0; bottom: 0; width: 3px;
+            background: currentColor; border-radius: 1.5px;
+        }
+        .game-control-btn.is-pause .icon::before { left: 0; }
+        .game-control-btn.is-pause .icon::after  { right: 0; }
+
+        /* --- Side AI Judge live panel (desktop ≥ 980px) --- */
+        .ai-judge-side {
+            position: fixed;
+            right: 18px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 240px;
+            padding: 16px 18px;
+            border: 1px solid rgba(124, 204, 255, 0.32);
+            border-radius: 14px;
+            background: linear-gradient(180deg, rgba(18, 26, 52, 0.92) 0%, rgba(10, 14, 32, 0.94) 100%);
+            box-shadow:
+                0 0 0 1px rgba(255, 255, 255, 0.03) inset,
+                0 0 18px rgba(68, 211, 255, 0.18),
+                0 10px 30px rgba(0, 0, 0, 0.55);
+            color: #d7eaff;
+            font: 500 12px/1.45 'Segoe UI', system-ui, sans-serif;
+            z-index: 11;
+            display: none; /* shown via media query below */
+        }
+        .ai-judge-side .eyebrow {
+            font: 700 10px/1 'Segoe UI', system-ui, sans-serif;
+            letter-spacing: 2.8px;
+            color: #7cf;
+            text-shadow: 0 0 8px rgba(124, 204, 255, 0.45);
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+        .ai-judge-side .status {
+            font: 700 13px/1.3 'Segoe UI', system-ui, sans-serif;
+            color: #e9f4ff;
+            letter-spacing: 0.3px;
+            margin-bottom: 4px;
+            word-break: break-word;
+            overflow-wrap: anywhere;
+        }
+        .ai-judge-side .last-winner {
+            margin-top: 10px; padding-top: 10px;
+            border-top: 1px solid rgba(124, 204, 255, 0.15);
+            font: 600 11px/1.4 'Segoe UI', system-ui, sans-serif;
+            color: rgba(255, 255, 255, 0.6);
+        }
+        .ai-judge-side .last-winner b { color: #7fffa8; }
+        .ai-judge-side .last-winner.loss b { color: #ff8b8b; }
+        .ai-judge-side a {
+            display: inline-block; margin-top: 8px;
+            font: 600 10px/1 'Segoe UI', system-ui, sans-serif;
+            letter-spacing: 0.6px; color: #7cf; text-decoration: none;
+            border-bottom: 1px dashed rgba(124, 204, 255, 0.5); padding-bottom: 1px;
+        }
+        @media (min-width: 980px) { .ai-judge-side { display: block; } }
+
+        /* --- Legacy side hud kept hidden (replaced by .game-hud) --- */
         .hud-panel {
+            display: none !important;
             position: fixed;
             left: 8px;
             top: 50%;
@@ -918,16 +1072,45 @@
 
     <!-- Levels Overlay removed per request -->
 
-    <!-- [JDID] Side HUD (scores) -->
-        <div class="hud-panel" aria-hidden="false">
-            <div class="hud-circle" id="hudLevel">1</div> <!-- Tl3na l'level l hna -->
-            <div class="hud-bar magenta"></div>
-            <button id="pauseBtn" class="hud-pause" title="Pause" aria-label="Pause"></button> <!-- Hbtna l'pause l hna -->
-            <button id="muteBtn" class="hud-mute" title="Mute" aria-label="Mute">🔈</button>
-            <div class="hud-bar cyan"></div>
-            <div class="hud-score" id="hudAi">0</div>
-            <div class="hud-score" id="hudPlayer">0</div>
+    <!-- Top HUD: AI score · LEVEL · YOU score (clean 3-box cyber HUD) -->
+    <div class="game-hud" id="gameHud" aria-hidden="false" style="display:none;">
+        <div class="hud-box hud-ai">
+            <div class="hud-box-label">AI</div>
+            <div class="hud-box-value" id="hudAi">0</div>
         </div>
+        <div class="hud-box hud-level">
+            <div class="hud-box-label">Level</div>
+            <div class="hud-box-value" id="hudLevel">01</div>
+        </div>
+        <div class="hud-box hud-you">
+            <div class="hud-box-label">You</div>
+            <div class="hud-box-value" id="hudPlayer">0</div>
+        </div>
+    </div>
+
+    <!-- Bottom controls: pause + mute -->
+    <div class="game-controls" id="gameControls" style="display:none;">
+        <button id="pauseBtn" class="game-control-btn is-pause" title="Pause" aria-label="Pause">
+            <span class="icon"></span>
+            <span>Pause</span>
+        </button>
+        <button id="muteBtn" class="game-control-btn" title="Mute" aria-label="Mute">
+            <span style="font-size:14px;">🔈</span>
+        </button>
+    </div>
+
+    <!-- Side AI Judge live verdict (desktop only) -->
+    <aside class="ai-judge-side" id="aiJudgeSide" aria-label="AI Judge live panel" style="display:none;">
+        <div class="eyebrow">/// AI Judge · On-chain</div>
+        <div class="status" id="aiJudgeSideStatus">Idle. Win a level to invoke the AI judge.</div>
+        <div class="last-winner" id="aiJudgeSideLast">
+            <span style="opacity:0.55;">No verdict yet.</span>
+        </div>
+        <a id="aiJudgeSideLink" href="#" target="_blank" rel="noopener" style="display:none;">View tx on explorer →</a>
+    </aside>
+
+    <!-- Legacy hidden compatibility wrapper (do not remove, kept for legacy JS refs) -->
+    <div class="hud-panel" style="display:none;" aria-hidden="true"></div>
 
     <!-- [JDID] Pause Overlay -->
     <div class="pause-overlay" id="pauseOverlay" style="display:none;">
@@ -1187,6 +1370,32 @@
           ui.link.href = EXPLORER_TX(txHash);
           ui.link.style.display = 'inline-block'; // overrides CSS default (none)
         }
+        // Mirror status into the persistent side panel (desktop only).
+        const sideStatus = document.getElementById('aiJudgeSideStatus');
+        const sideLink   = document.getElementById('aiJudgeSideLink');
+        if (sideStatus){
+          sideStatus.textContent = statusText;
+          if (color) sideStatus.style.color = color;
+        }
+        if (sideLink && txHash){
+          sideLink.href = EXPLORER_TX(txHash);
+          sideLink.style.display = 'inline-block';
+        }
+      }
+      // Record the latest level outcome on the side panel.
+      // outcome = 'win' | 'loss' ; details is a short string like '3-1 · L2'
+      function aiJudgeSideLast(outcome, details){
+        const el = document.getElementById('aiJudgeSideLast');
+        if (!el) return;
+        if (!outcome){
+          el.classList.remove('loss');
+          el.innerHTML = '<span style="opacity:0.55;">No verdict yet.</span>';
+          return;
+        }
+        const isWin = outcome === 'win';
+        el.classList.toggle('loss', !isWin);
+        el.innerHTML = `Last verdict: <b>${isWin ? 'YOU' : 'AI'} won</b>` +
+                       (details ? ` <span style="opacity:0.7;">· ${details}</span>` : '');
       }
       function aiJudgeReset(){
         aiJudgeSet('Submitting match for AI consensus...', '', '#b9e2ff', null);
@@ -1406,6 +1615,7 @@
         fetchHighestLevel,
         fetchLeaderboard,
         setStatus,
+        aiJudgeSideLast,
       };
 
       if (btnConnect) btnConnect.addEventListener('click', handleConnect, { capture: true });
@@ -1541,6 +1751,20 @@
             const btnQuit = document.getElementById('btnQuit');
             const btnContinue = document.getElementById('btnContinue');
             const hudPanel = document.querySelector('.hud-panel');
+            const gameHud      = document.getElementById('gameHud');
+            const gameControls = document.getElementById('gameControls');
+            const aiJudgeSide  = document.getElementById('aiJudgeSide');
+            // Helpers to show/hide all the new in-game chrome together.
+            function showGameChrome(){
+                if (gameHud)      gameHud.style.display      = 'flex';
+                if (gameControls) gameControls.style.display = 'flex';
+                if (aiJudgeSide)  aiJudgeSide.style.display  = '';      // let CSS media query decide
+            }
+            function hideGameChrome(){
+                if (gameHud)      gameHud.style.display      = 'none';
+                if (gameControls) gameControls.style.display = 'none';
+                if (aiJudgeSide)  aiJudgeSide.style.display  = 'none';
+            }
 
             // --- Canvas scaling ---
             const WIDTH_BASE = 400;
@@ -1623,6 +1847,7 @@ const PADDLE_RADIUS = Math.round(38 * SCALE); // enlarged player & AI paddles
             }
             // Hide HUD while in start menu
             if (hudPanel) hudPanel.style.display = 'none';
+            hideGameChrome();
             updateSoundLabel();
             if (btnContinue) btnContinue.addEventListener('click', () => { isPaused = false; updatePauseUI(); hidePauseOverlay(); });
             // Click on the dimmed background (NOT inside the panel) also resumes.
@@ -1645,6 +1870,7 @@ const PADDLE_RADIUS = Math.round(38 * SCALE); // enlarged player & AI paddles
                 stopAmbient();
                 stopMenuMusic();
                 if (hudPanel) hudPanel.style.display = 'none';
+                hideGameChrome();
                 if (startMenu) startMenu.style.display = 'grid';
             }
             if (btnQuit) btnQuit.addEventListener('click', goHome);
@@ -2506,7 +2732,7 @@ const PADDLE_RADIUS = Math.round(38 * SCALE); // enlarged player & AI paddles
             function updateSideHUD() {
                 if (hudAiEl) hudAiEl.textContent = aiScore;
                 if (hudPlayerEl) hudPlayerEl.textContent = playerScore;
-                if (hudLevelEl) hudLevelEl.textContent = currentLevel;
+                if (hudLevelEl) hudLevelEl.textContent = String(currentLevel).padStart(2, '0');
             }
 
             // Function bach nrsmo Ttabla (Mbedla)
@@ -2901,6 +3127,7 @@ const PADDLE_RADIUS = Math.round(38 * SCALE); // enlarged player & AI paddles
                     // Pass real match data so the AI judge can verify plausibility.
                     try {
                         window.GenClashChain?.reportWin?.(playerScore, aiScore);
+                        window.GenClashChain?.aiJudgeSideLast?.('win', `${playerScore}-${aiScore} · L${currentLevel}`);
                     } catch(_) {}
                     if (currentLevel >= TOTAL_LEVELS){
                         const congrats = document.getElementById('congratsOverlay');
@@ -2914,7 +3141,10 @@ const PADDLE_RADIUS = Math.round(38 * SCALE); // enlarged player & AI paddles
                     // Loss: record on-chain (resets current_level to 1).
                     playSound('lose');
                     if (loseScoreEl) loseScoreEl.textContent = `${playerScore}:${aiScore}`;
-                    try { window.GenClashChain?.reportLoss?.(); } catch(_) {}
+                    try {
+                        window.GenClashChain?.reportLoss?.();
+                        window.GenClashChain?.aiJudgeSideLast?.('loss', `${playerScore}-${aiScore} · L${currentLevel}`);
+                    } catch(_) {}
                     currentLevel = 1;
                     if (loseOverlay) loseOverlay.style.display = 'grid';
                     isPaused = true;
@@ -3088,6 +3318,7 @@ const PADDLE_RADIUS = Math.round(38 * SCALE); // enlarged player & AI paddles
                 stopAmbient();
                 isPaused = false; updatePauseUI();
                 if (hudPanel) hudPanel.style.display = 'block';
+                showGameChrome();
                 if (settingsPanel) settingsPanel.style.display = 'none';
                 setObstacleLayout();
                 resetPuck(1);
