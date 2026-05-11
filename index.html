@@ -943,9 +943,19 @@
       }
 
       // ---- Pay entry fee for the current level -------------------------
-      // Strict mode: we BLOCK until validators ACCEPT the tx before letting
-      // the player start the match. This prevents the UI from racing ahead
-      // of a tx that might get rejected by consensus.
+      // Hybrid optimistic flow: once the wallet has submitted the tx to the
+      // network, we let the player start immediately. Bradbury can take several
+      // minutes to move a tx from PENDING -> COMMITTING -> ACCEPTED, so we
+      // track the final status in the background and surface a link to the
+      // explorer so the player can verify in real time.
+      const EXPLORER_TX = (h) => `https://explorer-bradbury.genlayer.com/tx/${h}`;
+      function renderTxStatus(label, hash, statusWord){
+        if (!walletMsgEl) return;
+        const short = hash.slice(0,10) + '...';
+        walletMsgEl.innerHTML =
+          `${label} <a href="${EXPLORER_TX(hash)}" target="_blank" rel="noopener" ` +
+          `style="color:#7cf;text-decoration:underline;">${short}</a> · <b>${statusWord}</b>`;
+      }
       async function payToPlay(){
         if (!contractReady()) throw new Error('Wallet not connected or contract missing.');
         setStatus('Submitting entry fee to GenLayer...');
@@ -956,19 +966,25 @@
           value: ENTRY_FEE_WEI,
         });
         clog('pay_to_play tx:', txHash);
-        const short = txHash.slice(0,10) + '...';
-        setStatus(`Tx ${short} submitted. Waiting for validators (PENDING → ACCEPTED, ~30-90s)...`);
-        try{
-          await glClient.waitForTransactionReceipt({
-            hash: txHash,
-            status: TransactionStatus.ACCEPTED,
-          });
-        }catch(e){
-          setStatus('Entry fee was not accepted by consensus. Try again.');
-          throw e;
-        }
         matchStartTs = Date.now();
-        setStatus('Entry fee ACCEPTED on-chain. Level unlocked.');
+        renderTxStatus('Entry fee', txHash, 'SUBMITTED ✓');
+
+        // Track ACCEPTED in background (Bradbury can be slow; don't block game).
+        // We pass a generous timeout in ms so the SDK doesn't reject early.
+        (async () => {
+          try{
+            await glClient.waitForTransactionReceipt({
+              hash: txHash,
+              status: TransactionStatus.ACCEPTED,
+              retries: 600,       // ~10 min if SDK polls every 1s
+              interval: 1000,
+            });
+            renderTxStatus('Entry fee', txHash, 'ACCEPTED ✓');
+          }catch(_){
+            // Tx may still be processing; do not disturb gameplay.
+            renderTxStatus('Entry fee', txHash, 'still processing (check explorer)');
+          }
+        })();
         return txHash;
       }
 
