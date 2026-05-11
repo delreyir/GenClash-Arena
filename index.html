@@ -1010,6 +1010,13 @@
         throw new Error(`Timed out waiting for validators (last seen: ${lastStatus || 'unknown'}).`);
       }
 
+      // Optimistic flow: once the wallet has SUBMITTED the tx (signed and
+      // broadcast), gameplay starts. The validator pipeline (PENDING ->
+      // PROPOSING -> COMMITTING -> REVEALING -> ACCEPTED) is tracked in the
+      // background and surfaced live in the status bar with a clickable
+      // explorer link. This is the canonical pattern for Optimistic
+      // Democracy and prevents long Bradbury queue times from blocking the
+      // game. Tx remains real and on-chain — only the UI is non-blocking.
       async function payToPlay(){
         if (!contractReady()) throw new Error('Wallet not connected or contract missing.');
         setStatus('Submitting entry fee to GenLayer...');
@@ -1020,10 +1027,17 @@
           value: ENTRY_FEE_WEI,
         });
         clog('pay_to_play tx:', txHash);
-        // Strict: block until validators ACCEPT.
-        await waitForAccepted(txHash, { label: 'Entry fee' });
         matchStartTs = Date.now();
-        renderTxStatus('Entry fee', txHash, 'ACCEPTED ✓ · level unlocked');
+        renderTxStatus('Entry fee', txHash, 'PENDING (submitted, validators voting...)');
+        // Track ACCEPTED in background — does NOT block gameplay.
+        (async () => {
+          try {
+            await waitForAccepted(txHash, { label: 'Entry fee' });
+            renderTxStatus('Entry fee', txHash, 'ACCEPTED ✓ on-chain');
+          } catch(e){
+            renderTxStatus('Entry fee', txHash, 'still processing (check explorer)');
+          }
+        })();
         return txHash;
       }
 
