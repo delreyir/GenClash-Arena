@@ -2873,8 +2873,10 @@ const PADDLE_RADIUS = Math.round(38 * SCALE); // enlarged player & AI paddles
                 try{
                     chain.setStatus?.('Approve 0.0001 GEN to retry Level 1...');
                     await chain.payToPlay();
-                    const lvl = await chain.fetchCurrentLevel();
-                    window.setLocalLevel?.(lvl);
+                    // Trust local intent: a loss always restarts at level 1.
+                    // (Don't refetch on-chain level here - report_loss may not
+                    // have ACCEPTED yet, which would return a stale value.)
+                    window.setLocalLevel?.(1);
                     restartAfterLose();
                 }catch(e){
                     console.error('Restart payment error:', e);
@@ -2933,8 +2935,9 @@ const PADDLE_RADIUS = Math.round(38 * SCALE); // enlarged player & AI paddles
                 try{
                     chain.setStatus?.('Approve 0.0001 GEN to unlock the next level...');
                     await chain.payToPlay();
-                    const lvl = await chain.fetchCurrentLevel();
-                    window.setLocalLevel?.(lvl);
+                    // Trust local intent: after a win, advance one level.
+                    // (Don't refetch on-chain level here - report_win may not
+                    // have ACCEPTED yet, which would clobber the advance.)
                     proceedNextLevel();
                 }catch(e){
                     console.error('Next-level payment error:', e);
