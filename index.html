@@ -1088,19 +1088,30 @@
         const ui = aiJudgeUI();
         if (ui.link) ui.link.style.display = 'none';
       }
-      // Try to extract the LLM verdict ({"valid":..., "reason":...}) from a
-      // GenLayer tx receipt. The exact field name varies by SDK version, so
-      // we search a handful of likely paths defensively.
+      // Extract the LLM verdict ({"valid":..., "reason":...}) from a
+      // GenLayer tx receipt. Per the official docs the LLM output is at:
+      //   tx.consensus_data.leader_receipt.eq_outputs.leader["0"]
+      // It is a JSON string (the leader's response from gl.nondet.exec_prompt
+      // with response_format="json"). We also try a few fallback paths in
+      // case the SDK normalises field names differently across versions.
       function extractLlmVerdict(tx){
         if (!tx || typeof tx !== 'object') return null;
-        const candidates = [
-          tx.consensus_data?.leader_receipt?.result,
-          tx.consensus_data?.leader_receipt?.execution_result,
-          tx.consensus_data?.leader_receipt?.contract_state,
-          tx.leader_receipt?.result,
-          tx.execution_result?.result,
+        const lr = tx.consensus_data?.leader_receipt
+                || tx.consensusData?.leaderReceipt
+                || tx.leader_receipt
+                || tx.leaderReceipt;
+        const eq = lr?.eq_outputs?.leader || lr?.eqOutputs?.leader;
+        const candidates = [];
+        if (eq && typeof eq === 'object'){
+          // The docs show keys "0", "1", ... for each equivalence principle
+          // call. Our contract has one, so "0" is what we want.
+          for (const k of Object.keys(eq)) candidates.push(eq[k]);
+        }
+        candidates.push(
+          lr?.result,
+          lr?.execution_result,
           tx.result,
-        ];
+        );
         for (const c of candidates){
           if (!c) continue;
           if (typeof c === 'object' && 'valid' in c) return c;
