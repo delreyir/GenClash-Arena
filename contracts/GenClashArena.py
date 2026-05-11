@@ -2,16 +2,21 @@
 """
 GenClash Arena - Intelligent Contract for GenLayer
 ==================================================
-Progression-based on-chain arcade with per-level transactions
-and a public leaderboard ranked by highest level reached.
+Progression-based on-chain arcade with per-level transactions, AI-judged
+wins, and a public leaderboard ranked by highest level reached.
 
-Flow (2 tx per level, both cheap, no LLM in the critical path):
-  1. pay_to_play()   -> pays ENTRY_FEE_WEI, unlocks the current level
-  2. report_win()    -> advances current_level by 1, updates highest_level/XP
-     or report_loss() -> resets current_level to 1
+Flow (2 tx per level):
+  1. pay_to_play()                            -> pays ENTRY_FEE_WEI, unlocks
+                                                  the current level
+  2. report_win(score_us, score_ai, duration) -> AI judge in Optimistic
+                                                  Democracy consensus must
+                                                  agree the match is plausible
+                                                  before current_level advances
+     or report_loss()                         -> resets current_level to 1
 
-Optional Intelligent Contract feature (LLM in Optimistic Democracy):
-  - claim_run_bonus(summary) -> AI-judged bonus XP for completing a full run
+Intelligent Contract features (LLM in Optimistic Democracy consensus):
+  - report_win()             -> AI referee validates every win  (CRITICAL PATH)
+  - claim_run_bonus(summary) -> AI bonus XP for finishing all 10 levels
   - refresh_weekly_theme()   -> LLM-generated weekly gameplay modifier
 
 Leaderboard:

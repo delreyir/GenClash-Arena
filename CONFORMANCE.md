@@ -7,7 +7,7 @@
 - **Live app:** <https://gen-clash-arena.vercel.app>
 - **Repo:** <https://github.com/delreyir/GenClash-Arena>
 - **Network:** GenLayer Bradbury Testnet (chain ID `4221`, RPC `https://rpc-bradbury.genlayer.com`)
-- **Deployed contract:** [`0x92d666EC2C1bA1f1506686Be141367c69dbffc92`](https://explorer-bradbury.genlayer.com/address/0x92d666EC2C1bA1f1506686Be141367c69dbffc92)
+- **Deployed contract:** [`0xFb14a90D77dd31Bb65Eb8CA97BE2C43C5d0E7E0e`](https://explorer-bradbury.genlayer.com/address/0xFb14a90D77dd31Bb65Eb8CA97BE2C43C5d0E7E0e) *(AI-judged report_win in critical path)*
 - **Source:** [`contracts/GenClashArena.py`](./contracts/GenClashArena.py) and [`index.html`](./index.html)
 
 ---
@@ -88,7 +88,7 @@ Every on-chain action in this app is publicly verifiable:
 - Account used during development:
   [`0x0f5BC1369677EE317F44F5E4d878D1bf6e2C87Fb`](https://explorer-bradbury.genlayer.com/address/0x0f5BC1369677EE317F44F5E4d878D1bf6e2C87Fb)
   → look at the `Transactions` tab: every entry is a `CONTRACT_CALL` to our
-  contract `0x92d6…ffc92` with function `pay_to_play` / `report_win` /
+  contract `0xFb14…7E0e` with function `pay_to_play` / `report_win` /
   `report_loss`, value `0.0001 GEN`, nonce-ordered.
 - Contract storage is observable via the `get_leaderboard`, `get_current_level`,
   `get_highest_level`, `get_xp` view methods.

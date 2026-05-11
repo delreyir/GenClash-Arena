@@ -65,9 +65,9 @@ with the real deployed address.
 
 ### Gameplay flow
 
-1. **Connect wallet** → auto-install GenLayer Snap, switch to Bradbury.
-2. **Start Match** → `pay_to_play` (0.0001 GEN) unlocks your current level.
-3. **Play a level** → on win, `report_win` advances you; on loss, `report_loss` resets you to Level 1.
+1. **Connect wallet** → MetaMask, Rabby, Coinbase Wallet, Frame, or any EIP-1193 injected wallet. No MetaMask Snap required. The app prompts to switch / add the GenLayer Bradbury network automatically.
+2. **Start Match** → `pay_to_play` (0.0001 GEN) unlocks your current level. The frontend blocks gameplay until validators ACCEPT the fee on-chain.
+3. **Play a level** → on win, `report_win(score_us, score_ai, duration)` is submitted. **An AI referee runs inside Optimistic Democracy consensus** (validators independently re-execute the LLM and must agree) before the level advances. On loss, `report_loss` resets you to Level 1.
 4. **Next Level** → another `pay_to_play` (0.0001 GEN) then play.
 5. **Leaderboard** → on-chain ranking by highest level reached.
 
@@ -75,10 +75,10 @@ with the real deployed address.
 
 | Field | Value |
 |---|---|
-| Contract address | `0x92d666EC2C1bA1f1506686Be141367c69dbffc92` |
+| Contract address | `0xFb14a90D77dd31Bb65Eb8CA97BE2C43C5d0E7E0e` |
 | Network | GenLayer Bradbury (chain ID `4221`) |
 | Entry fee | `0.0001 GEN` per level |
-| Explorer | <https://explorer-bradbury.genlayer.com/address/0x92d666EC2C1bA1f1506686Be141367c69dbffc92> |
+| Explorer | <https://explorer-bradbury.genlayer.com/address/0xFb14a90D77dd31Bb65Eb8CA97BE2C43C5d0E7E0e> |
 
 ## Running locally
 
