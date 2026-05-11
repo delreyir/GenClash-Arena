@@ -943,8 +943,12 @@
       }
 
       // ---- Pay entry fee for the current level -------------------------
+      // Strict mode: we BLOCK until validators ACCEPT the tx before letting
+      // the player start the match. This prevents the UI from racing ahead
+      // of a tx that might get rejected by consensus.
       async function payToPlay(){
         if (!contractReady()) throw new Error('Wallet not connected or contract missing.');
+        setStatus('Submitting entry fee to GenLayer...');
         const txHash = await glClient.writeContract({
           address: GENCLASH_CONTRACT,
           functionName: 'pay_to_play',
@@ -952,10 +956,19 @@
           value: ENTRY_FEE_WEI,
         });
         clog('pay_to_play tx:', txHash);
+        const short = txHash.slice(0,10) + '...';
+        setStatus(`Tx ${short} submitted. Waiting for validators (PENDING → ACCEPTED, ~30-90s)...`);
+        try{
+          await glClient.waitForTransactionReceipt({
+            hash: txHash,
+            status: TransactionStatus.ACCEPTED,
+          });
+        }catch(e){
+          setStatus('Entry fee was not accepted by consensus. Try again.');
+          throw e;
+        }
         matchStartTs = Date.now();
-        glClient.waitForTransactionReceipt({ hash: txHash, status: TransactionStatus.ACCEPTED })
-          .then(()=> setStatus('Entry fee accepted. Level unlocked.'))
-          .catch(()=>{});
+        setStatus('Entry fee ACCEPTED on-chain. Level unlocked.');
         return txHash;
       }
 
