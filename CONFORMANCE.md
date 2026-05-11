@@ -27,23 +27,26 @@
 | Explicit user errors with `gl.vm.UserError`                        | Lines 95, 120, 124, 156, 178                   |
 | Native value transfer accounting                                   | `total_fees_collected` line 107                |
 
-## 2. Optimistic Democracy + Equivalence Principle
+## 2. Optimistic Democracy + Equivalence Principle (AI in critical path)
 
-The contract uses GenVM non-determinism (LLM in consensus) in two places that
-follow the **leader + validators** equivalence-principle pattern documented at
-[docs.genlayer.com](https://docs.genlayer.com).
+The contract uses GenVM non-determinism (LLM in consensus) in **three** places.
+Crucially, **`report_win` itself is AI-judged** — every single level-up
+transaction triggers an LLM call inside Optimistic Democracy consensus. This
+puts AI in the game's critical path, not in an optional showcase.
 
 | Pattern from docs                                                  | Implementation                                 |
 | ------------------------------------------------------------------ | ---------------------------------------------- |
-| Leader proposes an LLM result via `gl.nondet.exec_prompt(...)`     | `leader_fn` in `claim_run_bonus` (line 203) and `refresh_weekly_theme` (line 241) |
-| Validators independently run the LLM and verify agreement          | `validator_fn` in both methods checks bounds + re-runs `leader_fn` and compares within `XP_VALIDATION_MARGIN` |
-| Combined under `gl.vm.run_nondet_unsafe(leader_fn, validator_fn)`  | Lines 222 and 256                              |
-| JSON-structured LLM output (`response_format="json"`)              | Lines 204, 242                                 |
-| Validator returns `bool` to accept/reject leader result            | Lines 206, 244                                 |
-| Result is clamped server-side after consensus                      | `bonus = max(0, min(MAX_RUN_BONUS_XP, ...))` line 223 |
+| Leader proposes an LLM result via `gl.nondet.exec_prompt(...)`     | `leader_fn` in `report_win` (~line 171), `claim_run_bonus`, and `refresh_weekly_theme` |
+| Validators independently run the LLM and verify agreement (Equivalence Principle) | `validator_fn` re-runs `leader_fn` and compares the verdict |
+| Combined under `gl.vm.run_nondet_unsafe(leader_fn, validator_fn)`  | `report_win`, `claim_run_bonus`, `refresh_weekly_theme` |
+| JSON-structured LLM output (`response_format="json"`)              | All three nondet calls                         |
+| Validator returns `bool` to accept/reject leader result            | All three `validator_fn`s                      |
+| Hard pre-checks before invoking the LLM (cheap, deterministic)     | `report_win` validates `score == 3`, opponent score `< 3`, `5s ≤ duration ≤ 1h` before paying for the LLM call |
+| Contract reverts via `gl.vm.UserError` if AI rejects               | `report_win` raises if `verdict["valid"] is false` |
 
-This means **AI judgement is part of consensus**, not an off-chain helper —
-exactly the "Intelligent Contract" feature GenLayer markets.
+**What this means for the reviewer:** every `report_win` tx in the explorer is
+proof of AI-in-consensus. Click any one, and you will see the LLM prompt and
+verdict in the execution receipt, plus the validator votes.
 
 ## 3. Frontend SDK usage (`genlayer-js`)
 

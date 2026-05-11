@@ -37,6 +37,11 @@ MAX_RUN_BONUS_XP: int = 200
 # Acceptable spread between leader and validator scoring for the AI bonus.
 XP_VALIDATION_MARGIN: int = 20
 
+# Match parameters used by the AI judge in report_win().
+WINNING_SCORE: int = 3              # Best-of-3 (must match the frontend).
+MIN_MATCH_SECONDS: int = 5          # Sub-5s win = obvious cheat.
+MAX_MATCH_SECONDS: int = 60 * 60    # 1h ceiling to bound the prompt.
+
 
 class GenClashArena(gl.Contract):
     # ---- Persistent storage ----------------------------------------------
@@ -108,12 +113,17 @@ class GenClashArena(gl.Contract):
             int(self.total_fees_collected) + int(gl.message.value)
         )
 
-    # ---- Report a level win ----------------------------------------------
+    # ---- Report a level win (AI-judged in consensus) --------------------
     @gl.public.write
-    def report_win(self) -> None:
-        """Record that the player won their current level.
+    def report_win(self, score_us: int, score_ai: int, duration_s: int) -> None:
+        """Record a win — AI validators must agree the match is plausible.
 
-        Advances current_level by 1 and updates highest_level / XP.
+        Critical-path Intelligent Contract feature: every win triggers an
+        LLM call inside Optimistic Democracy consensus. The leader proposes a
+        verdict, validators independently re-run the prompt, and the level is
+        only advanced if a majority agrees on plausibility (Equivalence
+        Principle). This is the canonical "AI in consensus" pattern from the
+        GenLayer docs, applied to the game's most security-sensitive path.
         """
         sender = gl.message.sender_address
         if int(self.paid_sessions.get(sender, u256(0))) == 0:
@@ -123,6 +133,69 @@ class GenClashArena(gl.Contract):
         if cur == 0:
             raise gl.vm.UserError("No active level to report.")
 
+        # ---- Deterministic sanity bounds (cheap pre-checks) -------------
+        if score_us != WINNING_SCORE:
+            raise gl.vm.UserError(
+                f"A win requires score {WINNING_SCORE}. Got {score_us}."
+            )
+        if score_ai < 0 or score_ai >= WINNING_SCORE:
+            raise gl.vm.UserError("Invalid opponent score for a win.")
+        if duration_s < MIN_MATCH_SECONDS or duration_s > MAX_MATCH_SECONDS:
+            raise gl.vm.UserError(
+                f"Match duration {duration_s}s out of plausible range "
+                f"[{MIN_MATCH_SECONDS}, {MAX_MATCH_SECONDS}]."
+            )
+
+        # ---- AI judge in Optimistic Democracy consensus ----------------
+        prompt = f"""
+You are the official AI referee for GenClash Arena, an on-chain neon arcade
+running on the GenLayer blockchain. Decide whether a reported match result is
+plausible enough to be recorded on-chain.
+
+Game rules:
+  * Each match is best-of-{WINNING_SCORE}: first player to {WINNING_SCORE} goals wins.
+  * Higher levels ramp up AI paddle speed and add obstacles, so:
+      - Level 1-3  : easy, expect 30-180s match duration.
+      - Level 4-6  : medium, expect 60-360s.
+      - Level 7-10 : hard, expect 120-600s.
+      - Level 11+  : extreme, expect 180-900s.
+  * Score 3-0 on a hard level in 20 seconds is implausible.
+  * Score 3-2 on level 10 in 8 minutes is plausible.
+
+Match to judge:
+  level     = {cur}
+  score_us  = {score_us}
+  score_ai  = {score_ai}
+  duration  = {duration_s} seconds
+
+Be strict but fair. Reject only obvious cheats (e.g. impossible time/level
+combinations). Respond strictly as compact JSON:
+  {{"valid": true|false, "reason": "<<=80 chars>"}}
+"""
+
+        def leader_fn() -> dict:
+            return gl.nondet.exec_prompt(prompt, response_format="json")
+
+        def validator_fn(leader_result) -> bool:
+            if not isinstance(leader_result, gl.vm.Return):
+                return False
+            data = leader_result.calldata
+            if "valid" not in data:
+                return False
+            try:
+                # Validators independently re-run the prompt and agree only
+                # if their own verdict matches the leader's boolean.
+                mine = leader_fn()
+                return bool(data["valid"]) == bool(mine["valid"])
+            except Exception:
+                return False
+
+        verdict = gl.vm.run_nondet_unsafe(leader_fn, validator_fn)
+        if not bool(verdict.get("valid", False)):
+            reason = str(verdict.get("reason", "AI rejected match"))[:80]
+            raise gl.vm.UserError(f"AI judge rejected: {reason}")
+
+        # ---- Apply state changes (only if AI accepted) -----------------
         # Advance to the next level (no cap - infinite progression).
         self.current_level[sender] = u256(cur + 1)
 

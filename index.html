@@ -1010,24 +1010,40 @@
         return txHash;
       }
 
-      // ---- Report a level win ------------------------------------------
-      async function reportWin(){
+      // ---- Report a level win (AI-judged in consensus) ----------------
+      // The contract's report_win invokes an LLM via gl.vm.run_nondet_unsafe,
+      // so the level only advances if the AI referee + validators agree the
+      // reported score / duration are plausible (Equivalence Principle).
+      async function reportWin(scoreUs, scoreAi, durationS){
         if (!contractReady()) return null;
         try{
-          setStatus('Submitting level win on-chain...');
+          // Sane defaults if the caller did not pass match data.
+          const us  = Number.isFinite(scoreUs) ? scoreUs : 3;
+          const ai  = Number.isFinite(scoreAi) ? scoreAi : 0;
+          const dur = Number.isFinite(durationS)
+            ? durationS
+            : Math.max(5, Math.round((Date.now() - matchStartTs) / 1000));
+          setStatus(`Submitting win to AI judge (${us}-${ai}, ${dur}s)...`);
           const txHash = await glClient.writeContract({
             address: GENCLASH_CONTRACT,
             functionName: 'report_win',
-            args: [],
+            args: [us, ai, dur],
           });
           clog('report_win tx:', txHash);
-          glClient.waitForTransactionReceipt({ hash: txHash, status: TransactionStatus.ACCEPTED })
-            .then(()=> setStatus('Level win recorded. Keep going!'))
-            .catch(()=>{});
+          renderTxStatus('AI judge', txHash, 'PENDING (LLM in consensus)');
+          // Don't block gameplay on the AI verdict; surface the live status.
+          (async () => {
+            try{
+              await waitForAccepted(txHash, { label: 'AI judge', maxMs: 25*60*1000 });
+              renderTxStatus('AI judge', txHash, 'ACCEPTED ✓ · win recorded');
+            }catch(e){
+              renderTxStatus('AI judge', txHash, 'rejected or pending (check explorer)');
+            }
+          })();
           return txHash;
         }catch(e){
           console.error('report_win error:', e);
-          setStatus('Could not record win on-chain.');
+          setStatus('Could not submit win to AI judge.');
           return null;
         }
       }
@@ -2600,7 +2616,10 @@ const PADDLE_RADIUS = Math.round(38 * SCALE); // enlarged player & AI paddles
                     // Win: record on-chain (advances current_level + awards XP).
                     playSound('win');
                     if (winScoreEl) winScoreEl.textContent = `${playerScore}:${aiScore}`;
-                    try { window.GenClashChain?.reportWin?.(); } catch(_) {}
+                    // Pass real match data so the AI judge can verify plausibility.
+                    try {
+                        window.GenClashChain?.reportWin?.(playerScore, aiScore);
+                    } catch(_) {}
                     if (currentLevel >= TOTAL_LEVELS){
                         const congrats = document.getElementById('congratsOverlay');
                         if (congrats) congrats.style.display = 'grid';
