@@ -148,57 +148,107 @@
         .game-control-btn.is-pause .icon::before { left: 0; }
         .game-control-btn.is-pause .icon::after  { right: 0; }
 
-        /* --- Side AI Judge live panel (desktop ≥ 980px) --- */
-        .ai-judge-side {
+        /* --- Esports side panels (desktop ≥ 980px) --- */
+        .side-stack {
             position: fixed;
-            right: 18px;
             top: 50%;
             transform: translateY(-50%);
+            display: none; /* shown via media query below */
+            flex-direction: column;
+            gap: 14px;
             width: 240px;
-            padding: 16px 18px;
+            z-index: 11;
+        }
+        .side-stack.left  { left: 18px; }
+        .side-stack.right { right: 18px; }
+        .info-card {
+            padding: 14px 16px 13px;
             border: 1px solid rgba(124, 204, 255, 0.32);
-            border-radius: 14px;
+            border-radius: 12px;
             background: linear-gradient(180deg, rgba(18, 26, 52, 0.92) 0%, rgba(10, 14, 32, 0.94) 100%);
             box-shadow:
                 0 0 0 1px rgba(255, 255, 255, 0.03) inset,
-                0 0 18px rgba(68, 211, 255, 0.18),
-                0 10px 30px rgba(0, 0, 0, 0.55);
+                0 0 16px rgba(68, 211, 255, 0.14),
+                0 8px 26px rgba(0, 0, 0, 0.5);
             color: #d7eaff;
-            font: 500 12px/1.45 'Segoe UI', system-ui, sans-serif;
-            z-index: 11;
-            display: none; /* shown via media query below */
+            font: 600 12px/1.5 'JetBrains Mono', 'Consolas', monospace;
+            direction: ltr;
+            unicode-bidi: isolate;
+            text-align: left;
         }
-        .ai-judge-side .eyebrow {
-            font: 700 10px/1 'Segoe UI', system-ui, sans-serif;
-            letter-spacing: 2.8px;
+        .info-card .eyebrow {
+            font: 700 10px/1 'JetBrains Mono', monospace;
+            letter-spacing: 2.5px;
             color: #7cf;
             text-shadow: 0 0 8px rgba(124, 204, 255, 0.45);
             text-transform: uppercase;
-            margin-bottom: 8px;
+            margin-bottom: 10px;
         }
-        .ai-judge-side .status {
-            font: 700 13px/1.3 'Segoe UI', system-ui, sans-serif;
+        .info-card ol { list-style: none; padding: 0; margin: 0; }
+        .info-card ol li {
+            display: flex; gap: 8px;
+            padding: 2px 0;
+            color: #cfe5ff;
+        }
+        .info-card ol li::before {
+            content: attr(data-n);
+            color: #7cf;
+            font-weight: 700;
+        }
+        .info-card.rules {
+            background: linear-gradient(135deg, rgba(60, 70, 200, 0.55) 0%, rgba(180, 50, 160, 0.45) 100%);
+            border-color: rgba(255, 130, 220, 0.45);
+            color: #ffffff;
+        }
+        .info-card.rules .eyebrow { color: #ffd0f4; }
+        .info-card.legend ul { list-style: none; padding: 0; margin: 0; }
+        .info-card.legend li { display: flex; align-items: center; gap: 10px; padding: 4px 0; }
+        .info-card.legend .swatch {
+            width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0;
+            border: 2px solid currentColor;
+            box-shadow: 0 0 8px currentColor;
+        }
+        .info-card.legend .swatch.ai     { color: #ff7bd0; }
+        .info-card.legend .swatch.you    { color: #66e1ff; }
+        .info-card.legend .swatch.goal   { width: 18px; height: 4px; border-radius: 2px; color: #7fffa8; }
+        .info-card.difficulty {
+            border-color: rgba(0, 230, 255, 0.45);
+            color: #b9eaff;
+        }
+        .info-card.difficulty .big {
+            font: 700 16px/1.35 'JetBrains Mono', monospace;
+            color: #e9faff;
+        }
+        .info-card.difficulty .big b { color: #7fffa8; }
+
+        /* AI Judge as a side card (matches the same family) */
+        .info-card.ai-judge .status {
+            font: 700 12px/1.35 'JetBrains Mono', monospace;
             color: #e9f4ff;
-            letter-spacing: 0.3px;
+            letter-spacing: 0.2px;
             margin-bottom: 4px;
             word-break: break-word;
             overflow-wrap: anywhere;
         }
-        .ai-judge-side .last-winner {
+        .info-card.ai-judge .last-winner {
             margin-top: 10px; padding-top: 10px;
-            border-top: 1px solid rgba(124, 204, 255, 0.15);
-            font: 600 11px/1.4 'Segoe UI', system-ui, sans-serif;
-            color: rgba(255, 255, 255, 0.6);
+            border-top: 1px solid rgba(124, 204, 255, 0.18);
+            font: 600 11px/1.4 'JetBrains Mono', monospace;
+            color: rgba(255, 255, 255, 0.62);
         }
-        .ai-judge-side .last-winner b { color: #7fffa8; }
-        .ai-judge-side .last-winner.loss b { color: #ff8b8b; }
-        .ai-judge-side a {
+        .info-card.ai-judge .last-winner b { color: #7fffa8; }
+        .info-card.ai-judge .last-winner.loss b { color: #ff8b8b; }
+        .info-card.ai-judge a {
             display: inline-block; margin-top: 8px;
-            font: 600 10px/1 'Segoe UI', system-ui, sans-serif;
+            font: 600 10px/1 'JetBrains Mono', monospace;
             letter-spacing: 0.6px; color: #7cf; text-decoration: none;
             border-bottom: 1px dashed rgba(124, 204, 255, 0.5); padding-bottom: 1px;
         }
-        @media (min-width: 980px) { .ai-judge-side { display: block; } }
+        .info-card.ai-judge a:hover { color: #b9e2ff; }
+
+        @media (min-width: 980px) {
+            .side-stack { display: flex; }
+        }
 
         /* --- Legacy side hud kept hidden (replaced by .game-hud) --- */
         .hud-panel {
@@ -813,6 +863,8 @@
             font: 500 13px/1.5 'Segoe UI', system-ui, -apple-system, sans-serif;
             text-align: center;
             overflow: hidden;
+            direction: ltr;
+            unicode-bidi: isolate;
          }
          .ai-judge-eyebrow {
             font: 700 10px/1 'Segoe UI', system-ui, sans-serif;
@@ -1099,14 +1151,40 @@
         </button>
     </div>
 
-    <!-- Side AI Judge live verdict (desktop only) -->
-    <aside class="ai-judge-side" id="aiJudgeSide" aria-label="AI Judge live panel" style="display:none;">
-        <div class="eyebrow">/// AI Judge · On-chain</div>
-        <div class="status" id="aiJudgeSideStatus">Idle. Win a level to invoke the AI judge.</div>
-        <div class="last-winner" id="aiJudgeSideLast">
-            <span style="opacity:0.55;">No verdict yet.</span>
+    <!-- Esports-style side panels (desktop only) -->
+    <aside class="side-stack left" id="sideStackLeft" aria-label="Game info panels" style="display:none;">
+        <div class="info-card howto">
+            <div class="eyebrow">/// How to play</div>
+            <ol>
+                <li data-n="01 —"><span>Drag your paddle (bottom)</span></li>
+                <li data-n="02 —"><span>Hit the puck into the magenta goal</span></li>
+                <li data-n="03 —"><span>First to 3 wins the level</span></li>
+                <li data-n="04 —"><span>Beat all 10 levels</span></li>
+            </ol>
         </div>
-        <a id="aiJudgeSideLink" href="#" target="_blank" rel="noopener" style="display:none;">View tx on explorer →</a>
+        <div class="info-card rules">
+            <div class="eyebrow">/// Rules</div>
+            <div>No power-ups. No second chances. Just you, a paddle, and an AI that gets meaner every level.</div>
+        </div>
+    </aside>
+
+    <aside class="side-stack right" id="sideStackRight" aria-label="Game legend and AI judge" style="display:none;">
+        <div class="info-card legend">
+            <div class="eyebrow">/// Legend</div>
+            <ul>
+                <li><span class="swatch ai"></span><span>AI paddle</span></li>
+                <li><span class="swatch you"></span><span>Your paddle / puck</span></li>
+                <li><span class="swatch goal"></span><span>Goal zone</span></li>
+            </ul>
+        </div>
+        <div class="info-card ai-judge" id="aiJudgeSide">
+            <div class="eyebrow">/// AI Judge · On-chain</div>
+            <div class="status" id="aiJudgeSideStatus">Idle. Win a level to invoke the AI judge.</div>
+            <div class="last-winner" id="aiJudgeSideLast">
+                <span style="opacity:0.55;">No verdict yet.</span>
+            </div>
+            <a id="aiJudgeSideLink" href="#" target="_blank" rel="noopener" style="display:none;">View tx on explorer →</a>
+        </div>
     </aside>
 
     <!-- Legacy hidden compatibility wrapper (do not remove, kept for legacy JS refs) -->
@@ -1753,17 +1831,20 @@
             const hudPanel = document.querySelector('.hud-panel');
             const gameHud      = document.getElementById('gameHud');
             const gameControls = document.getElementById('gameControls');
-            const aiJudgeSide  = document.getElementById('aiJudgeSide');
+            const sideStackL   = document.getElementById('sideStackLeft');
+            const sideStackR   = document.getElementById('sideStackRight');
             // Helpers to show/hide all the new in-game chrome together.
             function showGameChrome(){
                 if (gameHud)      gameHud.style.display      = 'flex';
                 if (gameControls) gameControls.style.display = 'flex';
-                if (aiJudgeSide)  aiJudgeSide.style.display  = '';      // let CSS media query decide
+                if (sideStackL)   sideStackL.style.display   = '';   // CSS media query decides
+                if (sideStackR)   sideStackR.style.display   = '';
             }
             function hideGameChrome(){
                 if (gameHud)      gameHud.style.display      = 'none';
                 if (gameControls) gameControls.style.display = 'none';
-                if (aiJudgeSide)  aiJudgeSide.style.display  = 'none';
+                if (sideStackL)   sideStackL.style.display   = 'none';
+                if (sideStackR)   sideStackR.style.display   = 'none';
             }
 
             // --- Canvas scaling ---
