@@ -943,11 +943,11 @@
       }
 
       // ---- Pay entry fee for the current level -------------------------
-      // Hybrid optimistic flow: once the wallet has submitted the tx to the
-      // network, we let the player start immediately. Bradbury can take several
-      // minutes to move a tx from PENDING -> COMMITTING -> ACCEPTED, so we
-      // track the final status in the background and surface a link to the
-      // explorer so the player can verify in real time.
+      // Strict mode: we poll the RPC directly until the tx reaches ACCEPTED
+      // (or FINALIZED). The SDK's waitForTransactionReceipt has a fixed retry
+      // budget that is too short for a congested Bradbury testnet, so we do
+      // our own long-form polling and surface the live on-chain stage
+      // (PENDING -> PROPOSING -> COMMITTING -> REVEALING -> ACCEPTED).
       const EXPLORER_TX = (h) => `https://explorer-bradbury.genlayer.com/tx/${h}`;
       function renderTxStatus(label, hash, statusWord){
         if (!walletMsgEl) return;
@@ -956,6 +956,43 @@
           `${label} <a href="${EXPLORER_TX(hash)}" target="_blank" rel="noopener" ` +
           `style="color:#7cf;text-decoration:underline;">${short}</a> · <b>${statusWord}</b>`;
       }
+      // Statuses that mean "done for gameplay purposes".
+      const DONE_STATUSES = new Set(['ACCEPTED','FINALIZED']);
+      // Statuses that mean "this tx will never succeed".
+      const FAIL_STATUSES = new Set(['CANCELED','UNDETERMINED','LEADER_TIMEOUT','VALIDATORS_TIMEOUT']);
+
+      async function waitForAccepted(txHash, {
+        maxMs      = 25 * 60 * 1000,   // hard cap: 25 min
+        pollEveryMs = 3000,            // poll RPC every 3s
+        label      = 'Entry fee',
+      } = {}){
+        const t0 = Date.now();
+        let lastStatus = 'PENDING';
+        renderTxStatus(label, txHash, 'PENDING (submitted)');
+        while (Date.now() - t0 < maxMs){
+          await new Promise(r => setTimeout(r, pollEveryMs));
+          let tx = null;
+          try { tx = await glClient.getTransaction({ hash: txHash }); } catch(_){}
+          // Status can be a string ("PENDING","ACCEPTED",...) or numeric enum.
+          const raw = tx && (tx.status ?? tx.statusName ?? tx.state);
+          const status = typeof raw === 'string' ? raw.toUpperCase() : String(raw || '').toUpperCase();
+          if (status && status !== lastStatus){
+            lastStatus = status;
+            const elapsed = Math.round((Date.now()-t0)/1000);
+            renderTxStatus(label, txHash, `${status} (${elapsed}s)`);
+          } else if (status){
+            // Keep a live timer ticking so the user knows we're alive.
+            const elapsed = Math.round((Date.now()-t0)/1000);
+            renderTxStatus(label, txHash, `${status} (${elapsed}s)`);
+          }
+          if (DONE_STATUSES.has(status)) return tx;
+          if (FAIL_STATUSES.has(status)){
+            throw new Error(`Transaction ${status}. Check explorer for details.`);
+          }
+        }
+        throw new Error('Timed out waiting for validators. Tx may still finalize later.');
+      }
+
       async function payToPlay(){
         if (!contractReady()) throw new Error('Wallet not connected or contract missing.');
         setStatus('Submitting entry fee to GenLayer...');
@@ -966,25 +1003,10 @@
           value: ENTRY_FEE_WEI,
         });
         clog('pay_to_play tx:', txHash);
+        // Strict: block until validators ACCEPT.
+        await waitForAccepted(txHash, { label: 'Entry fee' });
         matchStartTs = Date.now();
-        renderTxStatus('Entry fee', txHash, 'SUBMITTED ✓');
-
-        // Track ACCEPTED in background (Bradbury can be slow; don't block game).
-        // We pass a generous timeout in ms so the SDK doesn't reject early.
-        (async () => {
-          try{
-            await glClient.waitForTransactionReceipt({
-              hash: txHash,
-              status: TransactionStatus.ACCEPTED,
-              retries: 600,       // ~10 min if SDK polls every 1s
-              interval: 1000,
-            });
-            renderTxStatus('Entry fee', txHash, 'ACCEPTED ✓');
-          }catch(_){
-            // Tx may still be processing; do not disturb gameplay.
-            renderTxStatus('Entry fee', txHash, 'still processing (check explorer)');
-          }
-        })();
+        renderTxStatus('Entry fee', txHash, 'ACCEPTED ✓ · level unlocked');
         return txHash;
       }
 
