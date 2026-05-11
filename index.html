@@ -1184,10 +1184,12 @@
           aiJudgeReset();
           aiJudgeSet(`Submitting (${us}-${ai}, ${dur}s) to AI judge...`, '', '#b9e2ff', null);
           setStatus(`Submitting win to AI judge (${us}-${ai}, ${dur}s)...`);
+          // GenVM int args go through CALLDATA — pass as BigInt so the SDK
+          // serialises them with full precision (Numbers can be ambiguous).
           const txHash = await glClient.writeContract({
             address: GENCLASH_CONTRACT,
             functionName: 'report_win',
-            args: [us, ai, dur],
+            args: [BigInt(us), BigInt(ai), BigInt(dur)],
           });
           clog('report_win tx:', txHash);
           renderTxStatus('AI judge', txHash, 'PENDING (LLM in consensus)');
