@@ -1,4 +1,4 @@
-# NEON CLASH
+# GenClashArena
 
 **1v1 air-hockey, judged by AI validators on GenLayer.**
 
@@ -12,7 +12,7 @@ is one static `index.html` + one Intelligent Contract.
 
 ---
 
-## What is NEON CLASH?
+## What is GenClashArena?
 
 - A **canvas air-hockey** game with a paddle + puck across **10 increasingly
   hostile levels**, each adding new obstacles, mechanics or visual chaos.
@@ -33,8 +33,8 @@ is one static `index.html` + one Intelligent Contract.
 
 ## How GenLayer is used
 
-NEON CLASH is intentionally a *thin frontend on a fat Intelligent Contract*
-so the GenLayer-native parts are unambiguous.
+GenClashArena is intentionally a *thin frontend on a fat Intelligent
+Contract* so the GenLayer-native parts are unambiguous.
 
 | Concern | Where it lives | GenLayer primitive |
 |---|---|---|
@@ -64,7 +64,7 @@ LLM independently* can.
 
 ### Multiplayer (1v1 rooms)
 - **Create Room** → contract entry fee tx → unique room code (e.g.
-  `NEON-X4F7K`) → click to copy → share with a friend.
+  `GENCLASH-X4F7K`) → click to copy → share with a friend.
 - **Join Room** → enter code → contract entry fee tx → WebRTC handshake.
 - **Host-authoritative physics**: the host runs the puck simulation and
   broadcasts state every animation frame; the client streams its paddle
@@ -94,7 +94,6 @@ contracts/
   GenClashArena.py    # Intelligent Contract (Python, GenVM)
 index.html            # Single-file frontend (canvas + wallet + WebRTC)
 README.md             # You are here
-images/               # Legacy assets (no longer referenced; safe to delete)
 ```
 
 The frontend has zero build step. Open the file, point a wallet at it, play.
@@ -170,7 +169,7 @@ Bradbury chain in your wallet, and **START MATCH** (solo) or
 
 1. Both players open the site and connect their wallets.
 2. Player A clicks ⚡ Multiplayer → **Create Room** → approves the 0.0001 GEN
-   entry tx → copies the `NEON-XXXXX` code.
+   entry tx → copies the `GENCLASH-XXXXX` code.
 3. Player B clicks ⚡ Multiplayer → **Join Room** → pastes the code →
    approves their own entry tx.
 4. Match starts. First to 2 rounds wins. Both peers submit the result

@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>NEON CLASH - 1v1 air hockey on GenLayer</title>
+    <title>GenClashArena - 1v1 air hockey on GenLayer</title>
     <!-- GenLayer dApp meta -->
-    <meta name="description" content="NEON CLASH - a best-of-three neon air-hockey arena. Solo levels and P2P multiplayer rooms; match outcomes validated by an AI judge running inside GenLayer's Optimistic Democracy consensus." />
-    <meta property="og:title" content="NEON CLASH on GenLayer" />
+    <meta name="description" content="GenClashArena - a best-of-three neon air-hockey arena. Solo levels and P2P multiplayer rooms; match outcomes validated by an AI judge running inside GenLayer's Optimistic Democracy consensus." />
+    <meta property="og:title" content="GenClashArena on GenLayer" />
     <meta property="og:description" content="Best-of-3 neon air hockey. Solo + WebRTC P2P rooms. AI-judged on-chain via GenLayer's Optimistic Democracy." />
     <meta name="theme-color" content="#0a0e22" />
     <!-- PeerJS for WebRTC P2P multiplayer (free public signaling broker) -->
@@ -1109,7 +1109,7 @@
     <div class="start-overlay" id="startMenu">
         <!-- Top bar: brand + GenLayer chip -->
         <div class="top-bar">
-            <div class="brand-mark"><span class="dot"></span> NEON // CLASH</div>
+            <div class="brand-mark"><span class="dot"></span> GenClash // Arena</div>
             <div class="gl-badge">Powered by <b>GenLayer</b></div>
         </div>
 
@@ -1140,8 +1140,8 @@
 
             <div class="neon-title">
                 <div class="title-eyebrow">// 1v1 Air Hockey · Best of 3</div>
-                <div class="neon-word">NEON</div>
-                <div class="neon-word small">CLASH</div>
+                <div class="neon-word">GENCLASH</div>
+                <div class="neon-word small">ARENA</div>
                 <div class="title-tagline">
                     Solo levels &amp; P2P multiplayer rooms.
                     <br/>Every match is <em>judged by AI validators</em> on GenLayer.
@@ -1381,7 +1381,7 @@
                 <div class="lobby-eyebrow">/// Join existing room</div>
                 <div class="lobby-title">ENTER CODE</div>
                 <div class="lobby-sub">Paste the room code your friend shared with you.</div>
-                <input class="lobby-input" id="lobbyCodeInput" placeholder="NEON-XXXXX" maxlength="32" autocomplete="off" />
+                <input class="lobby-input" id="lobbyCodeInput" placeholder="GENCLASH-XXXXX" maxlength="32" autocomplete="off" />
                 <div class="lobby-actions">
                     <button class="lobby-btn" id="btnLobbyJoinBack">Back</button>
                     <button class="lobby-btn primary" id="btnLobbyJoinSubmit">Connect</button>
@@ -1925,10 +1925,10 @@
       };
       window.GenClashMP = MP;
 
-      // Generate a short, friendly room code like "NEON-X4F7K".
+      // Generate a short, friendly room code like "GENCLASH-X4F7K".
       function generateRoomCode(){
         const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-        let s = 'NEON-';
+        let s = 'GENCLASH-';
         for (let i = 0; i < 5; i++) s += alphabet[Math.floor(Math.random()*alphabet.length)];
         return s;
       }
