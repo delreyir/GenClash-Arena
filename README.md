@@ -1,88 +1,161 @@
-# GenClash Arena
+# NEON CLASH
 
-> On-chain arcade, judged by AI validators on **GenLayer**.
+**1v1 air-hockey, judged by AI validators on GenLayer.**
 
-> **Reviewing this project?** Jump straight to [**CONFORMANCE.md**](./CONFORMANCE.md)
-> for a line-by-line mapping of every GenLayer-docs requirement to its
-> implementation in this repo (contract + frontend + SDK usage + tx lifecycle).
+A best-of-three neon arcade where every match outcome is verified by an
+LLM-powered AI judge running inside GenLayer's **Optimistic Democracy**
+consensus. Solo level progression and **WebRTC P2P multiplayer rooms** share
+the same on-chain pipeline: pay, play, get judged, climb the leaderboard.
 
-An on-chain arcade running on the **GenLayer Bradbury testnet**. Match
-results are judged by AI validators through GenLayer's **Optimistic Democracy**
-consensus, and XP is distributed on-chain via an Intelligent Contract.
+Built for the *Mini-games for GenLayer's Community* mission. The whole game
+is one static `index.html` + one Intelligent Contract.
 
-Built for the *Mini-games for GenLayer's Community* mission:
+---
 
-- Multiplayer-ready (rooms keyed by wallet address; PvP-extensible).
-- Match length 5-15 minutes (10 short levels, fast pace).
-- Replayable weekly via an LLM-generated weekly theme/modifier.
-- On-chain leaderboard for community XP distribution.
-- Showcases Intelligent Contracts + Optimistic Democracy (AI judge).
+## What is NEON CLASH?
+
+- A **canvas air-hockey** game with a paddle + puck across **10 increasingly
+  hostile levels**, each adding new obstacles, mechanics or visual chaos.
+- **Best of 3 rounds** per match: a round goes to the first player to **3
+  goals**, the match to the first player to **2 rounds**. A full match lasts
+  ~6–10 minutes, comfortably inside the GenLayer mission's 5–15 min window.
+- **Two ways to play**:
+  - **Solo** vs. an AI paddle that gets 10% smarter every level.
+  - **Multiplayer 1v1** in a shared P2P room (WebRTC via PeerJS, no central
+    game server, sub-100 ms tick).
+- **Every result is judged on-chain.** When you win, the contract asks an
+  LLM (re-executed by every validator) whether the score & duration are
+  plausible. Only if the validators reach **Optimistic Democracy consensus
+  on `valid: true`** does your level advance and your XP get awarded.
+- **On-chain leaderboard** ranks players by highest level reached.
+
+---
+
+## How GenLayer is used
+
+NEON CLASH is intentionally a *thin frontend on a fat Intelligent Contract*
+so the GenLayer-native parts are unambiguous.
+
+| Concern | Where it lives | GenLayer primitive |
+|---|---|---|
+| Entry fee | `pay_to_play()` (payable, 0.0001 GEN) | Standard EVM-compatible tx |
+| Match verdict | `report_win(score_us, score_ai, duration)` | **`gl.nondet.exec_prompt`** — a *non-deterministic LLM call* inside the contract, re-run by every validator under **Comparative Equivalence** |
+| Loss | `report_loss()` | Deterministic reset; validators agree by `strict_eq` |
+| Player state | `current_level`, `highest_level`, `xp` | On-chain `TreeMap[Address, ...]` |
+| Leaderboard | `get_leaderboard()` | Read-only contract call (no gas) |
+| PvP entry | Both peers call `pay_to_play()` *before* the lobby opens | Same path as solo |
+
+The AI judge is the canonical use-case for GenLayer's Optimistic Democracy:
+a subjective question ("was this match score plausible?") that no single
+oracle could answer, but that a *committee of validators each running an
+LLM independently* can.
+
+---
+
+## Features
+
+### Gameplay
+- 10 unique levels (spinning bars, oscillating obstacles, hex grids, scaling
+  puck, slow-time pickups, dual-bar gauntlets, etc.).
+- Best-of-3 rounds, ~6–10 min per match.
+- Bottom-paddle touch / mouse / drag controls. Mobile-first sizing.
+- Side panels: **HOW TO PLAY**, **RULES**, **LEGEND**, and a live **AI
+  JUDGE** panel that streams tx status from the contract.
+
+### Multiplayer (1v1 rooms)
+- **Create Room** → contract entry fee tx → unique room code (e.g.
+  `NEON-X4F7K`) → click to copy → share with a friend.
+- **Join Room** → enter code → contract entry fee tx → WebRTC handshake.
+- **Host-authoritative physics**: the host runs the puck simulation and
+  broadcasts state every animation frame; the client streams its paddle
+  position back. Both peers see themselves at the bottom (coordinate frame
+  is flipped client-side).
+- After the match, **both peers submit on-chain** via `report_win` /
+  `report_loss`. The winner triggers the AI Judge, just like in solo.
+- Disconnect handling, copy-to-clipboard room code, timeout fallback.
+
+### On-chain
+- 100% of progression, scoring acceptance and the leaderboard live on
+  Bradbury. Nothing about a player's record is stored off-chain.
+- The frontend never marks a level as won locally — it waits for the
+  validators' decision, then re-reads `get_current_level`.
+
+### Leaderboard
+- `get_leaderboard()` returns top N players sorted by highest level.
+- Overlay shows rank, address, level reached, and XP earned.
+- Refresh button re-queries the chain on demand.
+
+---
 
 ## Repository layout
 
 ```
 contracts/
   GenClashArena.py    # Intelligent Contract (Python, GenVM)
-index.html            # Single-file frontend (canvas game + GenLayer wallet)
-images/               # Assets
+index.html            # Single-file frontend (canvas + wallet + WebRTC)
 README.md             # You are here
+images/               # Legacy assets (no longer referenced; safe to delete)
 ```
+
+The frontend has zero build step. Open the file, point a wallet at it, play.
+
+---
+
+## Architecture at a glance
+
+```
+                          ┌────────────────────────────────────┐
+                          │       GenLayer Bradbury chain      │
+   wallet tx ───────────▶│   GenClashArena Intelligent Contract│
+                          │  - pay_to_play  (payable)          │
+                          │  - report_win   (gl.nondet.exec_prompt)
+                          │  - report_loss                     │
+                          │  - get_leaderboard / get_*_level   │
+                          └────────────────┬───────────────────┘
+                                           │ tx hash + status
+                          ┌────────────────▼───────────────────┐
+                          │           index.html               │
+                          │   genlayer-js (esm.sh) · canvas    │
+                          │   AI-Judge panel polls tx status   │
+                          └──────────────┬──────────┬──────────┘
+                                         │          │ WebRTC DataChannel
+                                         │          │ (PeerJS broker for
+                                         │          │  signalling only)
+                                         │   ┌──────▼──────┐
+                                         │   │  Peer (opp.)│
+                                         │   └─────────────┘
+                                  (single browser, solo mode)
+```
+
+---
 
 ## Network
 
-| Setting               | Value                                       |
-|-----------------------|---------------------------------------------|
-| GenLayer RPC          | `https://rpc-bradbury.genlayer.com`         |
-| Chain ID              | `4221` (`0x107d`)                           |
-| Currency              | GEN                                         |
-| Explorer              | `https://explorer-bradbury.genlayer.com`    |
-| Faucet                | `https://testnet-faucet.genlayer.foundation`|
+| Setting   | Value |
+|-----------|-------|
+| RPC       | `https://rpc-bradbury.genlayer.com` |
+| Chain ID  | `4221` (`0x107d`) |
+| Currency  | GEN |
+| Explorer  | `https://explorer-bradbury.genlayer.com` |
+| Faucet    | `https://testnet-faucet.genlayer.foundation` |
 
-The frontend will auto-prompt the wallet to add/switch to this chain.
+The frontend auto-prompts the wallet to add / switch to this chain on
+connect.
 
-## Deploying the Intelligent Contract
+## Live deployment
 
-The fastest path is **GenLayer Studio** (browser, no install):
-
-1. Open <https://studio.genlayer.com>.
-2. Create a new contract, paste the contents of `contracts/GenClashArena.py`.
-3. Click *Deploy*. The constructor takes no arguments.
-4. Copy the deployed contract address.
-
-Alternative: deploy from your terminal with the GenLayer CLI / `genlayer-py`
-SDK against Bradbury (`https://rpc-bradbury.genlayer.com`). See
-<https://docs.genlayer.com/api-references/genlayer-cli>.
-
-## Wiring the address into the frontend
-
-Open `index.html`, find the `GenLayer integration` script block, and replace:
-
-```js
-const GENCLASH_CONTRACT = '0x0000000000000000000000000000000000000000';
-```
-
-with the real deployed address.
-
-### Gameplay flow
-
-1. **Connect wallet** → MetaMask, Rabby, Coinbase Wallet, Frame, or any EIP-1193 injected wallet. No MetaMask Snap required. The app prompts to switch / add the GenLayer Bradbury network automatically.
-2. **Start Match** → `pay_to_play` (0.0001 GEN) unlocks your current level. The frontend blocks gameplay until validators ACCEPT the fee on-chain.
-3. **Play a level** → on win, `report_win(score_us, score_ai, duration)` is submitted. **An AI referee runs inside Optimistic Democracy consensus** (validators independently re-execute the LLM and must agree) before the level advances. On loss, `report_loss` resets you to Level 1.
-4. **Next Level** → another `pay_to_play` (0.0001 GEN) then play.
-5. **Leaderboard** → on-chain ranking by highest level reached.
-
-### Live deployment
-
-| Field | Value |
-|---|---|
+| Field            | Value |
+|------------------|-------|
 | Contract address | `0xFb14a90D77dd31Bb65Eb8CA97BE2C43C5d0E7E0e` |
-| Network | GenLayer Bradbury (chain ID `4221`) |
-| Entry fee | `0.0001 GEN` per level |
-| Explorer | <https://explorer-bradbury.genlayer.com/address/0xFb14a90D77dd31Bb65Eb8CA97BE2C43C5d0E7E0e> |
+| Network          | GenLayer Bradbury (chain ID `4221`) |
+| Entry fee        | `0.0001 GEN` per match |
+| Explorer         | <https://explorer-bradbury.genlayer.com/address/0xFb14a90D77dd31Bb65Eb8CA97BE2C43C5d0E7E0e> |
+
+---
 
 ## Running locally
 
-It is a single static file. Any static server works:
+It's a single static file. Any static server works:
 
 ```powershell
 # from the project root
@@ -90,35 +163,64 @@ python -m http.server 8080
 ```
 
 Then visit <http://localhost:8080>, click **CONNECT WALLET**, approve the
-GenLayer Bradbury chain in MetaMask, and **START GAME**.
+Bradbury chain in your wallet, and **START MATCH** (solo) or
+**⚡ MULTIPLAYER (1v1)** (P2P).
 
-## Match flow on-chain
+### Multiplayer in 30 seconds
 
-1. **Connect** -> wallet signs `eth_requestAccounts` and switches to chain `0x107d`.
-2. **Start Game** -> `pay_to_play()` (payable, 0.001 GEN). Validators accept
-   the entry transaction.
-3. **Play** the match (locally, fast and snappy).
-4. **Win or lose** -> `record_result(player_score, ai_score, level, duration, summary)`.
-   - The leader validator runs `gl.nondet.exec_prompt` with a strict scoring
-     rubric and proposes an XP value `0..100`.
-   - Other validators independently re-run the same prompt. They accept if
-     their XP is within +/-12 of the leader's (Comparative Equivalence).
-   - On consensus, XP is added to the player's on-chain balance.
-5. **Leaderboard** -> any client can call `get_leaderboard()` to render the
-   weekly ranking.
+1. Both players open the site and connect their wallets.
+2. Player A clicks ⚡ Multiplayer → **Create Room** → approves the 0.0001 GEN
+   entry tx → copies the `NEON-XXXXX` code.
+3. Player B clicks ⚡ Multiplayer → **Join Room** → pastes the code →
+   approves their own entry tx.
+4. Match starts. First to 2 rounds wins. Both peers submit the result
+   on-chain at the end and the AI Judge verifies the winner.
 
-## Weekly replayability
+---
 
-`refresh_weekly_theme()` uses `gl.nondet.exec_prompt` to generate a new
-gameplay modifier each week. Validators ensure the theme is well-formed and
-non-abusive before accepting it. The frontend shows the theme on the start
-screen so players know what's different this week.
+## Deploying your own copy of the contract
+
+The fastest path is **GenLayer Studio**:
+
+1. Open <https://studio.genlayer.com>.
+2. Create a new contract, paste the contents of
+   `contracts/GenClashArena.py`.
+3. Click *Deploy* (constructor takes no arguments).
+4. Copy the deployed address.
+
+Alternative: deploy from your terminal with the GenLayer CLI or the
+`genlayer-py` SDK against Bradbury. See
+<https://docs.genlayer.com/api-references/genlayer-cli>.
+
+Then open `index.html`, find the `GenLayer integration` script block, and
+replace the address:
+
+```js
+const GENCLASH_CONTRACT = '0xYOUR_ADDRESS_HERE';
+```
+
+---
 
 ## Dev notes
 
-- The frontend uses `genlayer-js` from `esm.sh` so no bundler is required.
-- The contract uses `gl.vm.run_nondet_unsafe` because the AI judge involves a
-  per-validator LLM call - `strict_eq` would never converge.
-- Anti-cheat: the contract clamps inputs, requires a paid session before
-  `record_result`, and instructs the AI judge to set XP to 0 on cheating
-  hints in the player's self-report.
+- The frontend imports `genlayer-js` directly from `esm.sh`, so no bundler
+  is required — it's truly *one file*.
+- The contract relies on `gl.nondet.exec_prompt` for the AI judge call;
+  validators run the LLM independently and accept via Optimistic Democracy
+  (a per-validator quorum on the judge's `{valid, reason}` JSON).
+- The frontend polls `getTransaction` for the judge tx, surfaces the LLM
+  verdict in the WIN overlay *and* in the persistent side AI-Judge panel,
+  and links to the explorer for full transparency.
+- WebRTC signalling uses the **free public PeerJS broker**. Game state
+  itself is fully peer-to-peer, so the broker only sees the room code, not
+  any gameplay.
+- The HTML is `dir="ltr"` even though parts of the codebase carry Darija
+  comments — the rendering direction is enforced LTR everywhere.
+
+---
+
+## License
+
+MIT — do whatever you like, just don't claim you were the first to put an
+LLM referee inside an air-hockey paddle.
+
