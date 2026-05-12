@@ -220,6 +220,5 @@ const GENCLASH_CONTRACT = '0xYOUR_ADDRESS_HERE';
 
 ## License
 
-MIT — do whatever you like, just don't claim you were the first to put an
-LLM referee inside an air-hockey paddle.
+Built for the Mini-games for GenLayer's Community mission. Enter the Arena, play hard, and let the AI judge.
 
