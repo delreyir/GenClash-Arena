@@ -2,7 +2,7 @@
 
 **1v1 air-hockey, judged by AI validators on GenLayer.**
 
-A best-of-three neon arcade where every match outcome is verified by an
+A best-of-three clash arena where every match outcome is verified by an
 LLM-powered AI judge running inside GenLayer's **Optimistic Democracy**
 consensus. Solo level progression and **WebRTC P2P multiplayer rooms** share
 the same on-chain pipeline: pay, play, get judged, climb the leaderboard.
