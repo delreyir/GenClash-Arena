@@ -108,6 +108,26 @@
         .hud-box.hud-level .hud-box-label { color: rgba(255, 215, 122, 0.95); }
         .hud-box.hud-level .hud-box-value { color: #ffd77a; text-shadow: 0 0 12px rgba(255, 184, 77, 0.7); }
 
+        /* Round pips (best of 3) - 2 dots per side, lit when that side won a round */
+        .hud-rounds {
+            display: flex; gap: 5px; justify-content: center;
+            margin-top: 4px;
+        }
+        .hud-pip {
+            width: 6px; height: 6px; border-radius: 50%;
+            background: rgba(255, 255, 255, 0.18);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            transition: background 160ms ease, box-shadow 160ms ease;
+        }
+        .hud-box.hud-ai  .hud-pip.on { background: #ff7bd0; border-color: #ff7bd0; box-shadow: 0 0 8px #ff7bd0; }
+        .hud-box.hud-you .hud-pip.on { background: #66e1ff; border-color: #66e1ff; box-shadow: 0 0 8px #66e1ff; }
+        .hud-bo3 {
+            margin-top: 4px;
+            font: 700 8px/1 'JetBrains Mono', monospace;
+            letter-spacing: 1.5px;
+            color: rgba(255, 215, 122, 0.7);
+        }
+
         /* --- Bottom pause/mute pill (clean) --- */
         .game-controls {
             position: fixed;
@@ -1258,14 +1278,21 @@
         <div class="hud-box hud-ai">
             <div class="hud-box-label">AI</div>
             <div class="hud-box-value" id="hudAi">0</div>
+            <div class="hud-rounds" id="hudAiRounds" aria-label="AI rounds won">
+                <span class="hud-pip"></span><span class="hud-pip"></span>
+            </div>
         </div>
         <div class="hud-box hud-level">
             <div class="hud-box-label">Level</div>
             <div class="hud-box-value" id="hudLevel">01</div>
+            <div class="hud-bo3" title="Best of 3 rounds">BEST OF 3</div>
         </div>
         <div class="hud-box hud-you">
             <div class="hud-box-label">You</div>
             <div class="hud-box-value" id="hudPlayer">0</div>
+            <div class="hud-rounds" id="hudYouRounds" aria-label="Your rounds won">
+                <span class="hud-pip"></span><span class="hud-pip"></span>
+            </div>
         </div>
     </div>
 
@@ -2300,7 +2327,15 @@ const PADDLE_RADIUS = Math.round(38 * SCALE); // enlarged player & AI paddles
             const PADDLE_HIT_SPEED_SCALE = 0.8; // N9sna sor3a mlli tdrab l'paddle (player/adversaire)
             const AI_SPEED = 3.6 * SCALE; // n9sna shwiya l vitesse dial l'AI
 
-            const WINNING_SCORE = 3; // L'Hedef howa 3 goals
+            // --- Best-of-3 match format ---
+            // A "round" is won by the first player to ROUND_GOAL goals.
+            // The "match" is won by the first to MATCH_ROUNDS_TO_WIN rounds.
+            // i.e. best of 3 rounds, each round = first to 3 goals.
+            const ROUND_GOAL = 3;
+            const MATCH_ROUNDS_TO_WIN = 2;        // best of 3
+            const WINNING_SCORE = ROUND_GOAL;     // kept for legacy refs
+            let playerRounds = 0;
+            let aiRounds = 0;
             let currentLevel = 1; // Kanbdaw b Level 1
             let isPaused = true; // [JDID] Bidaya: waqfin f menu
             let isOnStartMenu = true; // باش نبينو غير الطابلة بلا الكورات
@@ -3253,6 +3288,16 @@ const PADDLE_RADIUS = Math.round(38 * SCALE); // enlarged player & AI paddles
                 if (hudAiEl) hudAiEl.textContent = aiScore;
                 if (hudPlayerEl) hudPlayerEl.textContent = playerScore;
                 if (hudLevelEl) hudLevelEl.textContent = String(currentLevel).padStart(2, '0');
+                // Best-of-3 round pips
+                const aiPipsEl  = document.getElementById('hudAiRounds');
+                const youPipsEl = document.getElementById('hudYouRounds');
+                const lightPips = (el, count) => {
+                    if (!el) return;
+                    const pips = el.querySelectorAll('.hud-pip');
+                    pips.forEach((p, i) => p.classList.toggle('on', i < count));
+                };
+                lightPips(aiPipsEl,  aiRounds);
+                lightPips(youPipsEl, playerRounds);
             }
 
             // Function bach nrsmo Ttabla (Mbedla)
@@ -3635,18 +3680,58 @@ const PADDLE_RADIUS = Math.round(38 * SCALE); // enlarged player & AI paddles
             }
 
             
-            // --- [JDID] Function l check dial l'Level Up ---
-            function checkLevelUp(lastScorer) { // 1 = player, 2 = ai
-                let roundOver = false;
+            // --- [JDID] Function l check dial l'Level Up (Best-of-3 aware) ---
+            //
+            // Best-of-3 flow:
+            //   - First to ROUND_GOAL goals wins a ROUND.
+            //   - First to MATCH_ROUNDS_TO_WIN rounds wins the MATCH (on-chain).
+            //   - Between rounds, scores reset to 0-0 and the puck restarts.
+            //
+            // The earlier code treated reaching ROUND_GOAL as the end of the
+            // match. We now intercept that and only escalate to a match-end
+            // (with on-chain reportWin/reportLoss) once the rounds tally hits
+            // MATCH_ROUNDS_TO_WIN.
+            // Resets the puck + scoreboard for a new round, shows a ROUND-N
+            // message and lets play continue.
+            function startNextRound(roundWinner){
+                playerScore = 0; aiScore = 0;
+                obstacle.angle = 0;
+                updateSideHUD();
+                const totalRound = playerRounds + aiRounds + 1;
+                goalMessage.text = 'ROUND ' + totalRound;
+                goalMessage.color = roundWinner === 1 ? COLOR_PLAYER : COLOR_AI;
+                goalMessage.timer = GOAL_MESSAGE_DURATION;
+                resetPuck(roundWinner === 1 ? 2 : 1);
+            }
 
+            function checkLevelUp(lastScorer) { // 1 = player, 2 = ai
+                // Round resolves: did either side just reach ROUND_GOAL goals?
+                // (When a round is won but the match isn't, just reset & continue.)
+                if (playerScore >= ROUND_GOAL && aiScore < ROUND_GOAL){
+                    playerRounds++; updateSideHUD();
+                    if (playerRounds < MATCH_ROUNDS_TO_WIN){
+                        startNextRound(1);
+                        return;
+                    }
+                } else if (aiScore >= ROUND_GOAL && playerScore < ROUND_GOAL){
+                    aiRounds++; updateSideHUD();
+                    if (aiRounds < MATCH_ROUNDS_TO_WIN){
+                        startNextRound(2);
+                        return;
+                    }
+                }
+
+                // Below: MATCH end (this last round push the rounds tally to
+                // MATCH_ROUNDS_TO_WIN).
                 // Check l'rb7
-                if (playerScore >= WINNING_SCORE) {
+                if (playerRounds >= MATCH_ROUNDS_TO_WIN || playerScore >= WINNING_SCORE) {
                     // Win: same on-chain flow whether solo or multiplayer.
                     // The AI Judge verifies score plausibility and the contract
                     // advances current_level + awards XP. After the verdict the
                     // user can pay 0.0001 GEN to play the next level (2, 3, ...).
                     playSound('win');
-                    if (winScoreEl) winScoreEl.textContent = `${playerScore}:${aiScore}`;
+                    // Display the *match* outcome (rounds), not just the last round score.
+                    if (winScoreEl) winScoreEl.textContent = `${playerRounds}:${aiRounds} (best of 3)`;
                     if (isMultiplayerMatch){
                         // End the P2P session. Set the flag FIRST so the
                         // disconnect handler we installed in
@@ -3670,9 +3755,9 @@ const PADDLE_RADIUS = Math.round(38 * SCALE); // enlarged player & AI paddles
                     }
                     isPaused = true;
                     return;
-                } else if (aiScore >= WINNING_SCORE) {
+                } else if (aiRounds >= MATCH_ROUNDS_TO_WIN || aiScore >= WINNING_SCORE) {
                     playSound('lose');
-                    if (loseScoreEl) loseScoreEl.textContent = `${playerScore}:${aiScore}`;
+                    if (loseScoreEl) loseScoreEl.textContent = `${playerRounds}:${aiRounds} (best of 3)`;
                     if (isMultiplayerMatch){
                         // See win branch above for rationale.
                         isMultiplayerMatch = false;
@@ -3854,10 +3939,14 @@ const PADDLE_RADIUS = Math.round(38 * SCALE); // enlarged player & AI paddles
                         movePuck();
                         checkCollisions();
                         // Broadcast state ~ once per frame.
+                        // Fields: puck (px,py,vx,vy), host paddle (hpx,hpy),
+                        // scores (hs=host goals, cs=client goals) and the
+                        // best-of-3 rounds tally (hr=host rounds, cr=client rounds).
                         MP.sendState({
                             px: puck.x, py: puck.y, vx: puck.vx, vy: puck.vy,
                             hpx: player.x, hpy: player.y,
                             hs: playerScore, cs: aiScore,
+                            hr: playerRounds, cr: aiRounds,
                         });
                     } else if (isMP && MP.role === 'client') {
                         // Apply latest authoritative state from host.
@@ -3875,8 +3964,22 @@ const PADDLE_RADIUS = Math.round(38 * SCALE); // enlarged player & AI paddles
                             // Scores: client's player = host's "cs" (client score),
                             //         client's opponent = host's "hs" (host score).
                             const newPlayer = s.cs|0, newAi = s.hs|0;
-                            if (newPlayer !== playerScore || newAi !== aiScore){
-                                playerScore = newPlayer; aiScore = newAi; updateSideHUD();
+                            const newPR = s.cr|0,    newAR = s.hr|0;
+                            const scoresChanged = (newPlayer !== playerScore) || (newAi !== aiScore);
+                            const roundsChanged = (newPR !== playerRounds) || (newAR !== aiRounds);
+                            if (scoresChanged || roundsChanged){
+                                playerScore  = newPlayer;
+                                aiScore      = newAi;
+                                playerRounds = newPR;
+                                aiRounds     = newAR;
+                                updateSideHUD();
+                            }
+                            // Trigger match-end on the client when the host's
+                            // authoritative rounds tally reaches MATCH_ROUNDS_TO_WIN.
+                            // (The client doesn't run physics so it can't reach
+                            // this through checkLevelUp naturally.)
+                            if (playerRounds >= MATCH_ROUNDS_TO_WIN || aiRounds >= MATCH_ROUNDS_TO_WIN){
+                                checkLevelUp(playerRounds >= MATCH_ROUNDS_TO_WIN ? 1 : 2);
                             }
                         }
                         // Stream the client's own paddle to the host every frame.
@@ -3910,6 +4013,7 @@ const PADDLE_RADIUS = Math.round(38 * SCALE); // enlarged player & AI paddles
                 if (startMenu) startMenu.style.display = 'none';
                 isOnStartMenu = false;
                 isMultiplayerMatch = false;
+                playerRounds = 0; aiRounds = 0;
                 stopMenuMusic();
                 stopAmbient();
                 isPaused = false; updatePauseUI();
@@ -3931,6 +4035,7 @@ const PADDLE_RADIUS = Math.round(38 * SCALE); // enlarged player & AI paddles
                 isMultiplayerMatch = true;
                 currentLevel = 1;
                 playerScore = 0; aiScore = 0;
+                playerRounds = 0; aiRounds = 0;
                 stopMenuMusic();
                 stopAmbient();
                 isPaused = false; updatePauseUI();
@@ -3965,7 +4070,7 @@ const PADDLE_RADIUS = Math.round(38 * SCALE); // enlarged player & AI paddles
             // Restart from Lose overlay: re-pay 0.001 GEN, then reset the match.
             function restartAfterLose() {
                 if (loseOverlay) loseOverlay.style.display = 'none';
-                playerScore = 0; aiScore = 0; updateSideHUD();
+                playerScore = 0; aiScore = 0; playerRounds = 0; aiRounds = 0; updateSideHUD();
                 goalMessage.timer = 0;
                 isPaused = false;
                 resetPuck(1);
@@ -4010,7 +4115,7 @@ const PADDLE_RADIUS = Math.round(38 * SCALE); // enlarged player & AI paddles
                     return;
                 }
                 if (winOverlay) winOverlay.style.display = 'none';
-                playerScore = 0; aiScore = 0; obstacle.angle = 0; obstacle2.angle = 0; updateSideHUD();
+                playerScore = 0; aiScore = 0; playerRounds = 0; aiRounds = 0; obstacle.angle = 0; obstacle2.angle = 0; updateSideHUD();
                 currentLevel++; // ندوز المستوى الموالي
                 maxUnlockedLevel = Math.max(maxUnlockedLevel, currentLevel);
                 isPaused = false;
@@ -4023,7 +4128,7 @@ const PADDLE_RADIUS = Math.round(38 * SCALE); // enlarged player & AI paddles
             const btnPlayAgain10 = document.getElementById('btnPlayAgain10');
             function playAgainFromStart(){
                 if (congratsOverlay) congratsOverlay.style.display = 'none';
-                playerScore = 0; aiScore = 0; obstacle.angle = 0; obstacle2.angle = 0; updateSideHUD();
+                playerScore = 0; aiScore = 0; playerRounds = 0; aiRounds = 0; obstacle.angle = 0; obstacle2.angle = 0; updateSideHUD();
                 currentLevel = 1;
                 isPaused = false;
                 setObstacleLayout();
@@ -4097,7 +4202,7 @@ const PADDLE_RADIUS = Math.round(38 * SCALE); // enlarged player & AI paddles
                 updateSideHUD();
                 hideLevelsOverlay();
                 isPaused = false;
-                playerScore = 0; aiScore = 0; obstacle.angle = 0; obstacle2.angle = 0;
+                playerScore = 0; aiScore = 0; playerRounds = 0; aiRounds = 0; obstacle.angle = 0; obstacle2.angle = 0;
                 setObstacleLayout();
                 resetPuck(1);
                 updatePauseUI();
