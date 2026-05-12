@@ -2037,9 +2037,23 @@
       if (btnLobbyJoinBack) btnLobbyJoinBack.addEventListener('click', () => { lobbyShow('home'); });
 
       if (btnLobbyCreate) btnLobbyCreate.addEventListener('click', async () => {
+        // Gate: require wallet + pay entry fee on-chain BEFORE creating the room
+        // so both peers go through the same flow as the solo "Start Match" path.
+        if (!window.GenClashChain?.connected){
+          alert('Connect your wallet first.');
+          return;
+        }
         lobbyShow('create');
         if (lobbyCodeDisplay) lobbyCodeDisplay.textContent = '...';
-        setLobbyStatus(lobbyStatusCreate, 'Opening signalling channel...', 'pulse');
+        setLobbyStatus(lobbyStatusCreate, 'Paying entry fee (0.0001 GEN)...', 'pulse');
+        try {
+          await window.GenClashChain.payToPlay();
+        } catch (e) {
+          console.error('Pay error:', e);
+          setLobbyStatus(lobbyStatusCreate, '❌ Entry fee tx failed/rejected', 'error');
+          return;
+        }
+        setLobbyStatus(lobbyStatusCreate, 'Entry paid. Opening signalling channel...', 'pulse');
         try {
           const code = await mpCreateRoom();
           if (lobbyCodeDisplay) lobbyCodeDisplay.textContent = code;
@@ -2081,8 +2095,24 @@
       if (btnLobbyJoinSubmit) btnLobbyJoinSubmit.addEventListener('click', async () => {
         const raw = (lobbyCodeInput?.value || '').trim().toUpperCase();
         if (!raw) { setLobbyStatus(lobbyStatusJoin, 'Enter a room code.', 'error'); return; }
-        setLobbyStatus(lobbyStatusJoin, 'Connecting to peer...', 'pulse');
+        // Same wallet+payment gate as the host: every peer must pay an entry fee
+        // so on-chain mechanics (AI Judge, level progression) work identically
+        // to the solo flow.
+        if (!window.GenClashChain?.connected){
+          setLobbyStatus(lobbyStatusJoin, 'Connect your wallet first.', 'error');
+          return;
+        }
         btnLobbyJoinSubmit.disabled = true;
+        setLobbyStatus(lobbyStatusJoin, 'Paying entry fee (0.0001 GEN)...', 'pulse');
+        try {
+          await window.GenClashChain.payToPlay();
+        } catch (e){
+          console.error('Pay error:', e);
+          setLobbyStatus(lobbyStatusJoin, '❌ Entry fee tx failed/rejected', 'error');
+          btnLobbyJoinSubmit.disabled = false;
+          return;
+        }
+        setLobbyStatus(lobbyStatusJoin, 'Entry paid. Connecting to peer...', 'pulse');
         try {
           await mpJoinRoom(raw);
           setLobbyStatus(lobbyStatusJoin, '✓ Connected. Starting match...', 'ok');
@@ -3611,21 +3641,23 @@ const PADDLE_RADIUS = Math.round(38 * SCALE); // enlarged player & AI paddles
 
                 // Check l'rb7
                 if (playerScore >= WINNING_SCORE) {
+                    // Win: same on-chain flow whether solo or multiplayer.
+                    // The AI Judge verifies score plausibility and the contract
+                    // advances current_level + awards XP. After the verdict the
+                    // user can pay 0.0001 GEN to play the next level (2, 3, ...).
                     playSound('win');
                     if (winScoreEl) winScoreEl.textContent = `${playerScore}:${aiScore}`;
                     if (isMultiplayerMatch){
-                        // PvP: no on-chain reporting, no level progression.
-                        // Show a simplified victory and let the user go home.
-                        const winSubEl = document.getElementById('winSub');
-                        if (winSubEl) winSubEl.textContent = 'You won the 1v1!';
-                        if (winOverlay) winOverlay.style.display = 'grid';
-                        // Hide "next level" button - this is a one-off PvP match.
-                        const btnNL = document.getElementById('btnNextLevel');
-                        if (btnNL) btnNL.style.display = 'none';
-                        isPaused = true;
-                        return;
+                        // End the P2P session. Set the flag FIRST so the
+                        // disconnect handler we installed in
+                        // startMultiplayerMatch becomes a no-op (avoids the
+                        // "opponent disconnected" alert when the peer closes
+                        // naturally as part of match end). Delay actual
+                        // destruction by ~600ms so the other peer has time to
+                        // process the final state frame.
+                        isMultiplayerMatch = false;
+                        setTimeout(() => { try { window.GenClashMP?.peer?.destroy?.(); } catch(_){} }, 600);
                     }
-                    // Solo: record on-chain (advances current_level + awards XP).
                     try {
                         window.GenClashChain?.reportWin?.(playerScore, aiScore);
                         window.GenClashChain?.aiJudgeSideLast?.('win', `${playerScore}-${aiScore} · L${currentLevel}`);
@@ -3642,17 +3674,11 @@ const PADDLE_RADIUS = Math.round(38 * SCALE); // enlarged player & AI paddles
                     playSound('lose');
                     if (loseScoreEl) loseScoreEl.textContent = `${playerScore}:${aiScore}`;
                     if (isMultiplayerMatch){
-                        // PvP loss: no on-chain reporting, just show the screen.
-                        const loseSubLocal = document.getElementById('loseSub');
-                        if (loseSubLocal) loseSubLocal.textContent = 'Your opponent won the 1v1.';
-                        if (loseOverlay) loseOverlay.style.display = 'grid';
-                        // Hide "restart" (needs on-chain pay); only HOME makes sense.
-                        const btnR = document.getElementById('btnRestart');
-                        if (btnR) btnR.style.display = 'none';
-                        isPaused = true;
-                        return;
+                        // See win branch above for rationale.
+                        isMultiplayerMatch = false;
+                        setTimeout(() => { try { window.GenClashMP?.peer?.destroy?.(); } catch(_){} }, 600);
                     }
-                    // Solo: record on-chain (resets current_level to 1).
+                    // Loss: record on-chain (resets current_level to 1).
                     try {
                         window.GenClashChain?.reportLoss?.();
                         window.GenClashChain?.aiJudgeSideLast?.('loss', `${playerScore}-${aiScore} · L${currentLevel}`);
