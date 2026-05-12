@@ -9,6 +9,8 @@
     <meta property="og:title" content="GenClash Arena on GenLayer" />
     <meta property="og:description" content="Mini-game for the GenLayer community. AI validators judge your matches and award XP via Optimistic Democracy." />
     <meta property="og:image" content="images/design.png" />
+    <!-- PeerJS for WebRTC P2P multiplayer (free public signaling broker) -->
+    <script defer src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
     <style>
         /* --- CSS dial L'Game --- */
         :root {
@@ -845,6 +847,132 @@
             transform: translateY(-1px);
          }
 
+         /* --- Multiplayer Lobby Overlay --- */
+         .lobby-overlay {
+            position: fixed; inset: 0; display: none; place-items: center;
+            background: radial-gradient(ellipse at center, rgba(10,4,30,0.85), rgba(0,0,0,0.95));
+            backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+            z-index: 50;
+         }
+         .lobby-panel {
+            width: min(420px, 92vw);
+            padding: 28px 30px 24px;
+            border: 1px solid rgba(124, 204, 255, 0.45);
+            border-radius: 18px;
+            background: linear-gradient(180deg, rgba(20, 28, 56, 0.95) 0%, rgba(10, 14, 34, 0.96) 100%);
+            box-shadow:
+                0 0 0 1px rgba(255, 255, 255, 0.04) inset,
+                0 0 30px rgba(68, 211, 255, 0.32),
+                0 22px 60px rgba(0, 0, 0, 0.6);
+            color: #d7eaff;
+            font-family: 'JetBrains Mono', monospace;
+            text-align: center;
+            direction: ltr;
+            unicode-bidi: isolate;
+         }
+         .lobby-eyebrow {
+            font: 700 11px/1 'JetBrains Mono', monospace;
+            letter-spacing: 4px;
+            color: #7cf;
+            text-shadow: 0 0 10px rgba(124, 204, 255, 0.6);
+            text-transform: uppercase;
+            margin-bottom: 6px;
+         }
+         .lobby-title {
+            font: 800 26px/1.1 'JetBrains Mono', monospace;
+            letter-spacing: 4px;
+            color: #ffffff;
+            text-shadow: 0 0 14px rgba(124, 204, 255, 0.6);
+            margin: 0 0 6px;
+         }
+         .lobby-sub {
+            font: 500 12px/1.4 'JetBrains Mono', monospace;
+            color: rgba(255, 255, 255, 0.6);
+            letter-spacing: 0.5px;
+            margin-bottom: 20px;
+         }
+         .lobby-actions {
+            display: flex; gap: 10px; margin-bottom: 14px;
+         }
+         .lobby-btn {
+            flex: 1;
+            padding: 14px 14px;
+            border-radius: 12px;
+            border: 1px solid rgba(124, 204, 255, 0.4);
+            background: linear-gradient(180deg, rgba(28, 40, 80, 0.6) 0%, rgba(14, 20, 42, 0.7) 100%);
+            color: #e9f4ff;
+            font: 700 12px/1.2 'JetBrains Mono', monospace;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: all 140ms ease;
+         }
+         .lobby-btn:hover { transform: translateY(-1px); border-color: #7cf; box-shadow: 0 0 16px rgba(124, 204, 255, 0.5); }
+         .lobby-btn.primary {
+            background: linear-gradient(180deg, rgba(124, 204, 255, 0.85) 0%, rgba(68, 211, 255, 0.95) 100%);
+            color: #04101e;
+            border-color: rgba(180, 230, 255, 0.85);
+            box-shadow: 0 0 16px rgba(68, 211, 255, 0.5);
+         }
+         .lobby-btn.danger {
+            color: #ff8b8b;
+            border-color: rgba(255, 107, 107, 0.45);
+         }
+         .lobby-input {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 12px 14px;
+            border-radius: 10px;
+            border: 1px solid rgba(124, 204, 255, 0.4);
+            background: rgba(8, 12, 28, 0.85);
+            color: #e9f4ff;
+            font: 700 14px/1 'JetBrains Mono', monospace;
+            letter-spacing: 3px;
+            text-align: center;
+            text-transform: uppercase;
+            outline: none;
+            margin-bottom: 12px;
+         }
+         .lobby-input:focus { border-color: #7cf; box-shadow: 0 0 12px rgba(124, 204, 255, 0.5); }
+         .lobby-code-display {
+            margin: 12px 0;
+            padding: 16px 12px;
+            border: 1px dashed rgba(124, 204, 255, 0.5);
+            border-radius: 12px;
+            background: rgba(8, 12, 28, 0.6);
+         }
+         .lobby-code-label {
+            font: 600 10px/1 'JetBrains Mono', monospace;
+            letter-spacing: 2.5px;
+            color: rgba(124, 204, 255, 0.8);
+            text-transform: uppercase;
+            margin-bottom: 8px;
+         }
+         .lobby-code {
+            font: 800 22px/1 'JetBrains Mono', monospace;
+            letter-spacing: 6px;
+            color: #ffffff;
+            text-shadow: 0 0 12px rgba(124, 204, 255, 0.7);
+            word-break: break-all;
+            cursor: pointer;
+            user-select: all;
+        }
+        .lobby-code.copied { color: #7fffa8; text-shadow: 0 0 12px rgba(127, 255, 168, 0.7); }
+        .lobby-status {
+            margin-top: 10px;
+            min-height: 1.4em;
+            font: 600 12px/1.4 'JetBrains Mono', monospace;
+            color: #b9e2ff;
+            letter-spacing: 0.5px;
+        }
+        .lobby-status.error  { color: #ff8b8b; }
+        .lobby-status.ok     { color: #7fffa8; }
+        .lobby-status.pulse  { animation: lobbyPulse 1.4s ease-in-out infinite; }
+        @keyframes lobbyPulse { 0%,100% { opacity: 1; } 50% { opacity: 0.45; } }
+
+        .lobby-step { display: none; }
+        .lobby-step.active { display: block; }
+
          /* --- AI Judge box on the WIN overlay (clean, contained, pro) --- */
          .ai-judge-box {
             margin: 6px auto 16px;
@@ -1024,6 +1152,7 @@
             <div class="start-actions">
                 <button class="menu-btn" id="btnConnect">Connect Wallet</button>
                 <button class="menu-btn primary" id="btnStart">Start Match</button>
+                <button class="menu-btn" id="btnMultiplayer" style="font-size:12px; letter-spacing:2px;">⚡ Multiplayer (1v1)</button>
                 <button class="menu-btn" id="btnLeaderboard" style="font-size:11px; letter-spacing:2px;">View Leaderboard</button>
             </div>
 
@@ -1189,6 +1318,51 @@
 
     <!-- Legacy hidden compatibility wrapper (do not remove, kept for legacy JS refs) -->
     <div class="hud-panel" style="display:none;" aria-hidden="true"></div>
+
+    <!-- =====================================================================
+         Multiplayer Lobby Overlay (WebRTC P2P via PeerJS)
+         ===================================================================== -->
+    <div class="lobby-overlay" id="lobbyOverlay" role="dialog" aria-label="Multiplayer lobby">
+        <div class="lobby-panel">
+            <!-- Step 1: Choose mode -->
+            <div class="lobby-step active" id="lobbyStepHome">
+                <div class="lobby-eyebrow">/// 1v1 P2P</div>
+                <div class="lobby-title">MULTIPLAYER</div>
+                <div class="lobby-sub">Play head-to-head with a friend over WebRTC. No server, no lag.</div>
+                <div class="lobby-actions">
+                    <button class="lobby-btn primary" id="btnLobbyCreate">Create Room</button>
+                    <button class="lobby-btn" id="btnLobbyJoin">Join Room</button>
+                </div>
+                <button class="lobby-btn danger" id="btnLobbyClose" style="margin-top:6px;">Cancel</button>
+            </div>
+
+            <!-- Step 2: Create flow - shows room code, waits for guest -->
+            <div class="lobby-step" id="lobbyStepCreate">
+                <div class="lobby-eyebrow">/// Waiting for opponent</div>
+                <div class="lobby-title">ROOM CREATED</div>
+                <div class="lobby-sub">Share this code with a friend. They click "Join Room" and enter it.</div>
+                <div class="lobby-code-display">
+                    <div class="lobby-code-label">Your room code</div>
+                    <div class="lobby-code" id="lobbyCodeDisplay" title="Click to copy">—</div>
+                </div>
+                <div class="lobby-status pulse" id="lobbyStatusCreate">Waiting for a peer to connect...</div>
+                <button class="lobby-btn danger" id="btnLobbyCancel" style="margin-top:14px;">Cancel</button>
+            </div>
+
+            <!-- Step 3: Join flow - input room code -->
+            <div class="lobby-step" id="lobbyStepJoin">
+                <div class="lobby-eyebrow">/// Join existing room</div>
+                <div class="lobby-title">ENTER CODE</div>
+                <div class="lobby-sub">Paste the room code your friend shared with you.</div>
+                <input class="lobby-input" id="lobbyCodeInput" placeholder="ABC-1234" maxlength="32" autocomplete="off" />
+                <div class="lobby-actions">
+                    <button class="lobby-btn" id="btnLobbyJoinBack">Back</button>
+                    <button class="lobby-btn primary" id="btnLobbyJoinSubmit">Connect</button>
+                </div>
+                <div class="lobby-status" id="lobbyStatusJoin"></div>
+            </div>
+        </div>
+    </div>
 
     <!-- [JDID] Pause Overlay -->
     <div class="pause-overlay" id="pauseOverlay" style="display:none;">
@@ -1699,6 +1873,232 @@
       if (btnConnect) btnConnect.addEventListener('click', handleConnect, { capture: true });
       if (btnStart)   btnStart.addEventListener('click',   handleStart,   { capture: true });
 
+      // =================================================================
+      // Multiplayer (WebRTC P2P via PeerJS)
+      // -----------------------------------------------------------------
+      // Architecture: one peer is the "host" (runs physics & is authoritative),
+      // the other is the "client" (sends paddle input, renders received state).
+      // Signalling is handled by the free PeerJS public broker.
+      // The lobby UI here only manages connection; the game loop reads
+      // `window.GenClashMP` to know its role and send/receive frames.
+      // =================================================================
+      const MP = {
+        peer: null,               // PeerJS instance
+        conn: null,               // active DataConnection
+        roomCode: null,           // host: own peer id; client: peer id of host
+        role: null,               // 'host' | 'client' | null
+        connected: false,
+        // Latest state from host (client reads this every frame)
+        remoteState: null,        // { px,py,vx,vy, hpx,hpy, hs,cs }
+        // Latest input from client (host reads this every frame)
+        remoteInput: null,        // { x, y }
+        onConnect: null,          // callback when datachannel opens
+        onMessage: null,          // callback for custom messages
+        onDisconnect: null,
+      };
+      window.GenClashMP = MP;
+
+      // Generate a short, friendly room code like "GENCLASH-X4F7K".
+      function generateRoomCode(){
+        const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+        let s = 'GENCLASH-';
+        for (let i = 0; i < 5; i++) s += alphabet[Math.floor(Math.random()*alphabet.length)];
+        return s;
+      }
+
+      function mpReset(){
+        try { if (MP.conn) MP.conn.close(); } catch(_){}
+        try { if (MP.peer) MP.peer.destroy(); } catch(_){}
+        MP.peer = null; MP.conn = null; MP.roomCode = null; MP.role = null;
+        MP.connected = false; MP.remoteState = null; MP.remoteInput = null;
+      }
+
+      function mpInstall(conn){
+        MP.conn = conn;
+        conn.on('open', () => {
+          MP.connected = true;
+          if (typeof MP.onConnect === 'function') MP.onConnect();
+        });
+        conn.on('data', (msg) => {
+          if (!msg || typeof msg !== 'object') return;
+          if (msg.t === 's') {
+            // state from host
+            MP.remoteState = msg;
+          } else if (msg.t === 'p') {
+            // paddle from client
+            MP.remoteInput = msg;
+          } else if (typeof MP.onMessage === 'function') {
+            MP.onMessage(msg);
+          }
+        });
+        conn.on('close', () => {
+          MP.connected = false;
+          if (typeof MP.onDisconnect === 'function') MP.onDisconnect();
+        });
+        conn.on('error', (e) => { console.warn('peer conn error', e); });
+      }
+
+      // Send helpers - safe no-ops if not connected.
+      MP.sendState = function(s){ if (MP.conn && MP.connected) try{ MP.conn.send({t:'s',...s}); }catch(_){}};
+      MP.sendPaddle = function(x, y){ if (MP.conn && MP.connected) try{ MP.conn.send({t:'p', x, y}); }catch(_){}};
+      MP.sendCustom = function(obj){ if (MP.conn && MP.connected) try{ MP.conn.send(obj); }catch(_){}};
+
+      async function mpCreateRoom(){
+        if (!window.Peer) throw new Error('PeerJS not loaded');
+        mpReset();
+        const code = generateRoomCode();
+        return new Promise((resolve, reject) => {
+          const peer = new Peer(code, { debug: 1 });
+          MP.peer = peer;
+          MP.role = 'host';
+          MP.roomCode = code;
+          peer.on('open', (id) => resolve(id));
+          peer.on('error', (err) => {
+            // ID-taken: regenerate once.
+            if (String(err && err.type) === 'unavailable-id') {
+              mpReset();
+              mpCreateRoom().then(resolve, reject);
+              return;
+            }
+            reject(err);
+          });
+          peer.on('connection', (conn) => mpInstall(conn));
+        });
+      }
+
+      async function mpJoinRoom(code){
+        if (!window.Peer) throw new Error('PeerJS not loaded');
+        mpReset();
+        return new Promise((resolve, reject) => {
+          const peer = new Peer(undefined, { debug: 1 });
+          MP.peer = peer;
+          MP.role = 'client';
+          MP.roomCode = code;
+          peer.on('open', () => {
+            const conn = peer.connect(code, { reliable: false, serialization: 'json' });
+            mpInstall(conn);
+            // Resolve once the channel is OPEN so the caller can show "Connected".
+            conn.on('open', () => resolve(true));
+            conn.on('error', (e) => reject(e));
+            // Safety timeout: if no open after 20s, reject.
+            setTimeout(() => {
+              if (!MP.connected) reject(new Error('Could not reach host (timeout)'));
+            }, 20000);
+          });
+          peer.on('error', (err) => reject(err));
+        });
+      }
+
+      // ---- Lobby UI wiring --------------------------------------------
+      const lobbyOverlay        = document.getElementById('lobbyOverlay');
+      const btnMultiplayer      = document.getElementById('btnMultiplayer');
+      const lobbyStepHome       = document.getElementById('lobbyStepHome');
+      const lobbyStepCreate     = document.getElementById('lobbyStepCreate');
+      const lobbyStepJoin       = document.getElementById('lobbyStepJoin');
+      const btnLobbyCreate      = document.getElementById('btnLobbyCreate');
+      const btnLobbyJoin        = document.getElementById('btnLobbyJoin');
+      const btnLobbyClose       = document.getElementById('btnLobbyClose');
+      const btnLobbyCancel      = document.getElementById('btnLobbyCancel');
+      const btnLobbyJoinBack    = document.getElementById('btnLobbyJoinBack');
+      const btnLobbyJoinSubmit  = document.getElementById('btnLobbyJoinSubmit');
+      const lobbyCodeDisplay    = document.getElementById('lobbyCodeDisplay');
+      const lobbyCodeInput      = document.getElementById('lobbyCodeInput');
+      const lobbyStatusCreate   = document.getElementById('lobbyStatusCreate');
+      const lobbyStatusJoin     = document.getElementById('lobbyStatusJoin');
+
+      function lobbyShow(step){
+        if (!lobbyOverlay) return;
+        lobbyOverlay.style.display = 'grid';
+        [lobbyStepHome, lobbyStepCreate, lobbyStepJoin].forEach(el => el && el.classList.remove('active'));
+        const target = step === 'create' ? lobbyStepCreate
+                     : step === 'join'   ? lobbyStepJoin
+                     :                     lobbyStepHome;
+        if (target) target.classList.add('active');
+      }
+      function lobbyHide(){
+        if (lobbyOverlay) lobbyOverlay.style.display = 'none';
+      }
+      function setLobbyStatus(el, text, kind){
+        if (!el) return;
+        el.textContent = text || '';
+        el.classList.remove('error','ok','pulse');
+        if (kind) el.classList.add(kind);
+      }
+
+      if (btnMultiplayer) btnMultiplayer.addEventListener('click', () => {
+        if (!window.Peer){
+          alert('Multiplayer library still loading. Please try again in a second.');
+          return;
+        }
+        lobbyShow('home');
+      });
+      if (btnLobbyClose)    btnLobbyClose.addEventListener('click', () => { mpReset(); lobbyHide(); });
+      if (btnLobbyCancel)   btnLobbyCancel.addEventListener('click', () => { mpReset(); lobbyShow('home'); });
+      if (btnLobbyJoinBack) btnLobbyJoinBack.addEventListener('click', () => { lobbyShow('home'); });
+
+      if (btnLobbyCreate) btnLobbyCreate.addEventListener('click', async () => {
+        lobbyShow('create');
+        if (lobbyCodeDisplay) lobbyCodeDisplay.textContent = '...';
+        setLobbyStatus(lobbyStatusCreate, 'Opening signalling channel...', 'pulse');
+        try {
+          const code = await mpCreateRoom();
+          if (lobbyCodeDisplay) lobbyCodeDisplay.textContent = code;
+          setLobbyStatus(lobbyStatusCreate, 'Waiting for a peer to connect...', 'pulse');
+          MP.onConnect = () => {
+            setLobbyStatus(lobbyStatusCreate, '✓ Peer connected. Starting match...', 'ok');
+            setTimeout(() => { lobbyHide(); window.startMultiplayerMatch?.(); }, 600);
+          };
+          MP.onDisconnect = () => {
+            setLobbyStatus(lobbyStatusCreate, 'Peer disconnected.', 'error');
+          };
+        } catch (e) {
+          console.error(e);
+          setLobbyStatus(lobbyStatusCreate, `❌ ${e.message || 'Could not create room'}`, 'error');
+        }
+      });
+
+      if (lobbyCodeDisplay) lobbyCodeDisplay.addEventListener('click', () => {
+        const code = lobbyCodeDisplay.textContent.trim();
+        if (!code || code === '...' || code === '—') return;
+        try {
+          navigator.clipboard.writeText(code);
+          lobbyCodeDisplay.classList.add('copied');
+          const orig = code;
+          lobbyCodeDisplay.textContent = '✓ COPIED';
+          setTimeout(() => {
+            lobbyCodeDisplay.classList.remove('copied');
+            lobbyCodeDisplay.textContent = orig;
+          }, 1100);
+        } catch(_){}
+      });
+
+      if (btnLobbyJoin) btnLobbyJoin.addEventListener('click', () => {
+        lobbyShow('join');
+        setLobbyStatus(lobbyStatusJoin, '');
+        if (lobbyCodeInput) { lobbyCodeInput.value = ''; setTimeout(()=>lobbyCodeInput.focus(), 50); }
+      });
+
+      if (btnLobbyJoinSubmit) btnLobbyJoinSubmit.addEventListener('click', async () => {
+        const raw = (lobbyCodeInput?.value || '').trim().toUpperCase();
+        if (!raw) { setLobbyStatus(lobbyStatusJoin, 'Enter a room code.', 'error'); return; }
+        setLobbyStatus(lobbyStatusJoin, 'Connecting to peer...', 'pulse');
+        btnLobbyJoinSubmit.disabled = true;
+        try {
+          await mpJoinRoom(raw);
+          setLobbyStatus(lobbyStatusJoin, '✓ Connected. Starting match...', 'ok');
+          setTimeout(() => { lobbyHide(); window.startMultiplayerMatch?.(); }, 600);
+        } catch (e) {
+          console.error(e);
+          setLobbyStatus(lobbyStatusJoin, `❌ ${e.message || 'Could not join'}`, 'error');
+        } finally {
+          btnLobbyJoinSubmit.disabled = false;
+        }
+      });
+      // Enter key in input submits the join.
+      if (lobbyCodeInput) lobbyCodeInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') btnLobbyJoinSubmit?.click();
+      });
+
       // ---- Leaderboard overlay wiring --------------------------------
       const btnLeaderboard       = document.getElementById('btnLeaderboard');
       const btnCloseLeaderboard  = document.getElementById('btnCloseLeaderboard');
@@ -1875,6 +2275,7 @@ const PADDLE_RADIUS = Math.round(38 * SCALE); // enlarged player & AI paddles
             let isPaused = true; // [JDID] Bidaya: waqfin f menu
             let isOnStartMenu = true; // باش نبينو غير الطابلة بلا الكورات
             let isMuted = false; // Mute dial s-sound
+            let isMultiplayerMatch = false; // [JDID] True during a P2P match
             let maxUnlockedLevel = 1; // [JDID] control dial levels
             const TOTAL_LEVELS = 10;
             const DEV_MODE = false; // مخفي: تعطيل زر/خيارات المطور
@@ -1945,6 +2346,14 @@ const PADDLE_RADIUS = Math.round(38 * SCALE); // enlarged player & AI paddles
                 if (loseOv) loseOv.style.display = 'none';
                 if (winOv)  winOv.style.display  = 'none';
                 if (congOv) congOv.style.display = 'none';
+                // Restore action buttons that PvP mode may have hidden.
+                const btnNL = document.getElementById('btnNextLevel');
+                const btnR  = document.getElementById('btnRestart');
+                if (btnNL) btnNL.style.display = '';
+                if (btnR)  btnR.style.display  = '';
+                // Tear down any active multiplayer session.
+                isMultiplayerMatch = false;
+                try { window.GenClashMP && (window.GenClashMP.peer || window.GenClashMP.conn) && (window.GenClashMP.peer?.destroy?.()); } catch(_){}
                 // رجعنا لصفحة البداية
                 isPaused = true; updatePauseUI();
                 isOnStartMenu = true;
@@ -3202,10 +3611,21 @@ const PADDLE_RADIUS = Math.round(38 * SCALE); // enlarged player & AI paddles
 
                 // Check l'rb7
                 if (playerScore >= WINNING_SCORE) {
-                    // Win: record on-chain (advances current_level + awards XP).
                     playSound('win');
                     if (winScoreEl) winScoreEl.textContent = `${playerScore}:${aiScore}`;
-                    // Pass real match data so the AI judge can verify plausibility.
+                    if (isMultiplayerMatch){
+                        // PvP: no on-chain reporting, no level progression.
+                        // Show a simplified victory and let the user go home.
+                        const winSubEl = document.getElementById('winSub');
+                        if (winSubEl) winSubEl.textContent = 'You won the 1v1!';
+                        if (winOverlay) winOverlay.style.display = 'grid';
+                        // Hide "next level" button - this is a one-off PvP match.
+                        const btnNL = document.getElementById('btnNextLevel');
+                        if (btnNL) btnNL.style.display = 'none';
+                        isPaused = true;
+                        return;
+                    }
+                    // Solo: record on-chain (advances current_level + awards XP).
                     try {
                         window.GenClashChain?.reportWin?.(playerScore, aiScore);
                         window.GenClashChain?.aiJudgeSideLast?.('win', `${playerScore}-${aiScore} · L${currentLevel}`);
@@ -3219,9 +3639,20 @@ const PADDLE_RADIUS = Math.round(38 * SCALE); // enlarged player & AI paddles
                     isPaused = true;
                     return;
                 } else if (aiScore >= WINNING_SCORE) {
-                    // Loss: record on-chain (resets current_level to 1).
                     playSound('lose');
                     if (loseScoreEl) loseScoreEl.textContent = `${playerScore}:${aiScore}`;
+                    if (isMultiplayerMatch){
+                        // PvP loss: no on-chain reporting, just show the screen.
+                        const loseSubLocal = document.getElementById('loseSub');
+                        if (loseSubLocal) loseSubLocal.textContent = 'Your opponent won the 1v1.';
+                        if (loseOverlay) loseOverlay.style.display = 'grid';
+                        // Hide "restart" (needs on-chain pay); only HOME makes sense.
+                        const btnR = document.getElementById('btnRestart');
+                        if (btnR) btnR.style.display = 'none';
+                        isPaused = true;
+                        return;
+                    }
+                    // Solo: record on-chain (resets current_level to 1).
                     try {
                         window.GenClashChain?.reportLoss?.();
                         window.GenClashChain?.aiJudgeSideLast?.('loss', `${playerScore}-${aiScore} · L${currentLevel}`);
@@ -3369,10 +3800,67 @@ const PADDLE_RADIUS = Math.round(38 * SCALE); // enlarged player & AI paddles
                     puck.radius = Math.max(6, Math.round(target));
                 }
 
+                // --- Multiplayer branch ---
+                // Host: runs full physics; the "ai" paddle is driven by the client's
+                //       paddle input over WebRTC (instead of moveAI). State is then
+                //       broadcast to the client at the same cadence.
+                // Client: runs NO physics. It snapshots the latest state received
+                //         from the host (puck + opponent paddle + scores), and
+                //         streams its own paddle position back to the host.
+                const MP = window.GenClashMP;
+                const isMP = !!(isMultiplayerMatch && MP && MP.connected);
+
                 if (!isPaused) {
-                    movePuck();
-                    checkCollisions();
-                    moveAI();
+                    if (isMP && MP.role === 'host') {
+                        // Drive the "ai" paddle from the remote client input.
+                        // Client sends its paddle position in *its own* frame
+                        // (bottom of its screen). We flip to put it on top.
+                        const inp = MP.remoteInput;
+                        if (inp) {
+                            ai.x = Math.max(ai.radius + BORDER_WIDTH,
+                                            Math.min(TABLE_WIDTH - ai.radius - BORDER_WIDTH, inp.x));
+                            // Client's y is in [0, TABLE_HEIGHT]; flip into host frame
+                            // and clamp to the top half so the opponent stays on top.
+                            const flippedY = TABLE_HEIGHT - inp.y;
+                            ai.y = Math.max(ai.radius + BORDER_WIDTH,
+                                            Math.min(TABLE_HEIGHT / 2 - ai.radius, flippedY));
+                        }
+                        movePuck();
+                        checkCollisions();
+                        // Broadcast state ~ once per frame.
+                        MP.sendState({
+                            px: puck.x, py: puck.y, vx: puck.vx, vy: puck.vy,
+                            hpx: player.x, hpy: player.y,
+                            hs: playerScore, cs: aiScore,
+                        });
+                    } else if (isMP && MP.role === 'client') {
+                        // Apply latest authoritative state from host.
+                        const s = MP.remoteState;
+                        if (s) {
+                            // Flip puck Y so the client sees themselves at the bottom.
+                            puck.x  = s.px;
+                            puck.y  = TABLE_HEIGHT - s.py;
+                            puck.vx = s.vx;
+                            puck.vy = -s.vy;
+                            // Host's paddle (bottom in host's frame) becomes the
+                            // client's opponent (top of client's screen).
+                            ai.x = s.hpx;
+                            ai.y = TABLE_HEIGHT - s.hpy;
+                            // Scores: client's player = host's "cs" (client score),
+                            //         client's opponent = host's "hs" (host score).
+                            const newPlayer = s.cs|0, newAi = s.hs|0;
+                            if (newPlayer !== playerScore || newAi !== aiScore){
+                                playerScore = newPlayer; aiScore = newAi; updateSideHUD();
+                            }
+                        }
+                        // Stream the client's own paddle to the host every frame.
+                        MP.sendPaddle(player.x, player.y);
+                    } else {
+                        // Single-player default behaviour.
+                        movePuck();
+                        checkCollisions();
+                        moveAI();
+                    }
                 }
                 
                 drawTable();
@@ -3395,6 +3883,7 @@ const PADDLE_RADIUS = Math.round(38 * SCALE); // enlarged player & AI paddles
             function startGameDirect() {
                 if (startMenu) startMenu.style.display = 'none';
                 isOnStartMenu = false;
+                isMultiplayerMatch = false;
                 stopMenuMusic();
                 stopAmbient();
                 isPaused = false; updatePauseUI();
@@ -3406,6 +3895,38 @@ const PADDLE_RADIUS = Math.round(38 * SCALE); // enlarged player & AI paddles
             }
             // Exposed for the GenLayer module to call after a successful pay_to_play tx.
             window.startGameDirect = startGameDirect;
+
+            // [JDID] Multiplayer match start - called by the lobby once two
+            // peers are connected. Uses Level 1 layout (no obstacles) so both
+            // peers play a clean 1v1 air-hockey match.
+            function startMultiplayerMatch(){
+                if (startMenu) startMenu.style.display = 'none';
+                isOnStartMenu = false;
+                isMultiplayerMatch = true;
+                currentLevel = 1;
+                playerScore = 0; aiScore = 0;
+                stopMenuMusic();
+                stopAmbient();
+                isPaused = false; updatePauseUI();
+                if (hudPanel) hudPanel.style.display = 'block';
+                showGameChrome();
+                if (settingsPanel) settingsPanel.style.display = 'none';
+                setObstacleLayout();
+                resetPuck(1);
+                updateSideHUD();
+                // Wire disconnect: drop back to home if the peer leaves mid-match.
+                const MP = window.GenClashMP;
+                if (MP){
+                    MP.onDisconnect = () => {
+                        if (isMultiplayerMatch){
+                            isMultiplayerMatch = false;
+                            alert('Opponent disconnected.');
+                            try { goHome?.(); } catch(_){}
+                        }
+                    };
+                }
+            }
+            window.startMultiplayerMatch = startMultiplayerMatch;
 
             // Allow the GenLayer module to sync the local level from the contract.
             window.setLocalLevel = function(n){
