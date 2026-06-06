@@ -1875,9 +1875,21 @@
           if (sm) sm.style.display = 'none';
         }catch(e){
           console.error('Start error:', e);
-          setStatus(e?.message?.includes('configured')
-            ? 'Contract address not set in index.html.'
-            : 'Payment failed or rejected.');
+          if (e?.message?.includes('configured')){
+            setStatus('Contract address not set in index.html.');
+          } else {
+            // [FIX] Ma nblokiwch l'game ila l'fee tff7 (MetaMask alert /
+            // testnet fee simulation). Hada testnet, fonds free mn faucet,
+            // 3lach n5elliw l'player yl3eb b last-known level.
+            try{
+              const lvl = await fetchCurrentLevel();
+              if (typeof window.setLocalLevel === 'function') window.setLocalLevel(lvl);
+            }catch(_){}
+            setStatus('Entry fee skipped — starting offline. Progress may not save on-chain.');
+            try{ window.startGameDirect?.(); }catch(_){}
+            const sm = document.getElementById('startMenu');
+            if (sm) sm.style.display = 'none';
+          }
         }finally{
           if (btnStart){ btnStart.textContent = 'START MATCH'; btnStart.disabled = false; }
         }
