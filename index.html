@@ -3539,8 +3539,17 @@ const PADDLE_RADIUS = Math.round(38 * SCALE); // enlarged player & AI paddles
                 if (puck.vx === 0 && puck.vy === 0 && puck.y < TABLE_HEIGHT / 2) {
                     const distAI = getDistance(puck, ai);
                     if (distAI < ai.radius + puck.radius + 8) {
-                        // Df3 l'kora باستعمال نفس منطق التصادم
-                        handlePaddleCollision(ai);
+                        // [FIX BUG] L'kora kanت كتحبس فوق الجدار العلوي.
+                        // Khass nf3oha l'l'wst/lt7t (b3id 3la l7it dial lfoq),
+                        // ماشي radially mn l'AI (li ymken yf3ha lfoq f l'wall).
+                        const speed = getMaxPuckSpeed() * PADDLE_HIT_SPEED_SCALE;
+                        // Random angle dghir bach ma tbqach تمشي نيشان
+                        const spread = (Math.random() - 0.5) * 0.6; // ~±17°
+                        puck.vx = Math.sin(spread) * speed;
+                        puck.vy = Math.cos(spread) * speed; // toujours positif => lt7t
+                        // B3d l'kora chwia 3la l'AI bach ma tls9ch
+                        puck.y = ai.y + (ai.radius + puck.radius + 2);
+                        playSound('paddle');
                     }
                 }
             }
@@ -3640,6 +3649,15 @@ const PADDLE_RADIUS = Math.round(38 * SCALE); // enlarged player & AI paddles
                 const speed = isRealPaddle ? base * PADDLE_HIT_SPEED_SCALE : base;
                 puck.vx = Math.cos(angle) * speed;
                 puck.vy = Math.sin(angle) * speed;
+
+                // [FIX BUG] Ma nخليوش l'paddle ydf3 l'kora kter f l7it li msdouda fih.
+                // Ila l'kora msdouda lfoq w l'paddle bgha yf3ha lfoq => 9lbha lt7t.
+                // Nafs l7aja l l7it dial lt7t. Hadshi kaymne3 loop dial حبسان الكورة.
+                if (puck.y <= puck.radius + BORDER_WIDTH + 2 && puck.vy < 0) {
+                    puck.vy = Math.abs(puck.vy);
+                } else if (puck.y >= TABLE_HEIGHT - puck.radius - BORDER_WIDTH - 2 && puck.vy > 0) {
+                    puck.vy = -Math.abs(puck.vy);
+                }
 
                 // Ndbzo l'kora chwia bach matls9ch
                 puck.x = paddle.x + (paddle.radius + puck.radius + 1) * Math.cos(angle);
