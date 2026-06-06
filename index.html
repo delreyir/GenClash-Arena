@@ -3804,16 +3804,9 @@ const PADDLE_RADIUS = Math.round(38 * SCALE); // enlarged player & AI paddles
                     return;
                 }
 
-                if (roundOver) {
-                    playerScore = 0;
-                    aiScore = 0;
-                    obstacle.angle = 0; // Nsaffiw l'obstacle
-                    // Nqdro nziw message hna "Level X"
-                    updateSideHUD();
-                }
-
+                // Normal goal (round/match not yet decided): just restart the
+                // puck and keep playing. The scorer concedes the serve.
                 // Reset l'puck f kol 7ala (b starter)
-                // Li marka l'bit, l'akhur ybda
                 // --- [FIX L'BUG] --- Hada howa l'islah
                 resetPuck(lastScorer === 1 ? 2 : 1); 
             }
