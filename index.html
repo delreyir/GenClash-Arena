@@ -1444,6 +1444,11 @@
       let userAddress = null;
       let glClient    = null;
       let matchStartTs = 0;
+      // [FIX] Tracking dial l'pay_to_play tx bach n'takkdo l'session msjjla
+      // f l'chain 9bel ma nsiftou report_win / report_loss (li kayrevertiw
+      // ila paid_sessions == 0).
+      let lastPayTxHash = null;
+      let paidSessionConfirmed = false;
 
       // ---- Helpers ------------------------------------------------------
       function getInjectedProvider(){
@@ -1626,11 +1631,14 @@
         });
         clog('pay_to_play tx:', txHash);
         matchStartTs = Date.now();
+        lastPayTxHash = txHash;
+        paidSessionConfirmed = false;
         renderTxStatus('Entry fee', txHash, 'PENDING (submitted, validators voting...)');
         // Track ACCEPTED in background — does NOT block gameplay.
         (async () => {
           try {
             await waitForAccepted(txHash, { label: 'Entry fee' });
+            paidSessionConfirmed = true;
             renderTxStatus('Entry fee', txHash, 'ACCEPTED ✓ on-chain');
           } catch(e){
             renderTxStatus('Entry fee', txHash, 'still processing (check explorer)');
@@ -1639,7 +1647,47 @@
         return txHash;
       }
 
-      // ---- Report a level win (AI-judged in consensus) ----------------
+      // [FIX] N'takkdo blli l'session dial l'pay msjjla f l'chain 9bel
+      // report_win/report_loss. Bla hadshi, l'tx kayrevert b "No paid session"
+      // (w MetaMask kaybin "expected to fail") ila l'match sala 9bel ma
+      // pay_to_play yousel l ACCEPTED 3la testnet l'bati.
+      async function ensurePaidSessionConfirmed(){
+        if (paidSessionConfirmed) return true;
+        // 1) Verify directly mn l'contract (has_paid).
+        try {
+          const paid = await glClient.readContract({
+            address: GENCLASH_CONTRACT,
+            functionName: 'has_paid',
+            args: [userAddress],
+          });
+          if (paid === true || paid === 1 || paid === '1'){
+            paidSessionConfirmed = true;
+            return true;
+          }
+        } catch(_){}
+        // 2) Ila 3ndna tx, n'tsennaw ACCEPTED.
+        if (lastPayTxHash){
+          setStatus('Confirming entry fee on-chain before reporting result...');
+          try {
+            await waitForAccepted(lastPayTxHash, { label: 'Entry fee' });
+            paidSessionConfirmed = true;
+            return true;
+          } catch(_){}
+        }
+        // 3) Last try: re-read has_paid mra okhra.
+        try {
+          const paid2 = await glClient.readContract({
+            address: GENCLASH_CONTRACT,
+            functionName: 'has_paid',
+            args: [userAddress],
+          });
+          if (paid2 === true || paid2 === 1 || paid2 === '1'){
+            paidSessionConfirmed = true;
+            return true;
+          }
+        } catch(_){}
+        return false;
+      }
       // The contract's report_win invokes an LLM via gl.vm.run_nondet_unsafe,
       // so the level only advances if the AI referee + validators agree the
       // reported score / duration are plausible (Equivalence Principle).
@@ -1740,6 +1788,13 @@
             ? durationS
             : Math.max(5, Math.round((Date.now() - matchStartTs) / 1000));
           aiJudgeReset();
+          // [FIX] N'takkdo l'session msjjla 9bel ma nsiftou (sinon revert).
+          const ready = await ensurePaidSessionConfirmed();
+          if (!ready){
+            aiJudgeSet('Waiting for entry fee...', 'Entry fee not confirmed on-chain yet. Try again in a moment.', '#d7c98a', null);
+            setStatus('Entry fee still pending on-chain. Wait a few seconds, then retry.');
+            return null;
+          }
           aiJudgeSet(`Submitting (${us}-${ai}, ${dur}s) to AI judge...`, '', '#b9e2ff', null);
           setStatus(`Submitting win to AI judge (${us}-${ai}, ${dur}s)...`);
           // GenVM int args go through CALLDATA — pass as BigInt so the SDK
@@ -1804,6 +1859,13 @@
       async function reportLoss(){
         if (!contractReady()) return null;
         try{
+          // [FIX] N'takkdo l'session msjjla 9bel ma nsiftou (sinon revert
+          // b "No paid session" w MetaMask kaybin "expected to fail").
+          const ready = await ensurePaidSessionConfirmed();
+          if (!ready){
+            setStatus('Entry fee still pending on-chain. Loss will record once it confirms.');
+            return null;
+          }
           setStatus('Submitting level loss on-chain...');
           const txHash = await glClient.writeContract({
             address: GENCLASH_CONTRACT,
