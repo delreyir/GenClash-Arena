@@ -1601,6 +1601,20 @@
       // explorer link. This is the canonical pattern for Optimistic
       // Democracy and prevents long Bradbury queue times from blocking the
       // game. Tx remains real and on-chain — only the UI is non-blocking.
+      // [FIX] Messages wad7in 3la 3lach l'fee tff7.
+      function humanizePayError(e){
+        const msg = (e && (e.message || e.toString())) || '';
+        const low = msg.toLowerCase();
+        if (low.includes('configured')) return 'Contract address not set in index.html.';
+        if (low.includes('user rejected') || low.includes('user denied') || (e && e.code === 4001))
+          return 'Transaction rejected. Confirm the 0.0001 GEN fee in your wallet to start.';
+        if (low.includes('insufficient') || low.includes('funds'))
+          return 'Not enough GEN for the fee + gas. Top up from the faucet and retry.';
+        if (low.includes('chain') || low.includes('network') || low.includes('0x107d') || low.includes('4221'))
+          return 'Wrong network. Switch your wallet to GenLayer Bradbury (chain 4221) and retry.';
+        return 'Payment failed. Confirm the transaction in your wallet (click "Review alert" → Confirm) and retry.';
+      }
+
       async function payToPlay(){
         if (!contractReady()) throw new Error('Wallet not connected or contract missing.');
         setStatus('Submitting entry fee to GenLayer...');
@@ -1875,21 +1889,9 @@
           if (sm) sm.style.display = 'none';
         }catch(e){
           console.error('Start error:', e);
-          if (e?.message?.includes('configured')){
-            setStatus('Contract address not set in index.html.');
-          } else {
-            // [FIX] Ma nblokiwch l'game ila l'fee tff7 (MetaMask alert /
-            // testnet fee simulation). Hada testnet, fonds free mn faucet,
-            // 3lach n5elliw l'player yl3eb b last-known level.
-            try{
-              const lvl = await fetchCurrentLevel();
-              if (typeof window.setLocalLevel === 'function') window.setLocalLevel(lvl);
-            }catch(_){}
-            setStatus('Entry fee skipped — starting offline. Progress may not save on-chain.');
-            try{ window.startGameDirect?.(); }catch(_){}
-            const sm = document.getElementById('startMenu');
-            if (sm) sm.style.display = 'none';
-          }
+          // [FIX] Khass l'transaction tdouz 9bel ma yebda l'game.
+          // Ma kanbdawch l'game ila l'fee ma tconfirmach / ma njhatch.
+          setStatus(humanizePayError(e));
         }finally{
           if (btnStart){ btnStart.textContent = 'START MATCH'; btnStart.disabled = false; }
         }
